@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Clôtures Pro — COVO</title>
+<link rel="manifest" id="pwa-manifest-link">
+<style>
+    * { box-sizing: border-box; }
+    :root {
+        --primary: #111111; --success: #16a34a; --danger: #dc2626; --info:#2563eb; --warning:#d97706;
+        --bg-body:       #f4f7f6;
+        --bg-card:       #ffffff;
+        --bg-card-2:     #eeeeee;
+        --text-main:     #0a0a0a;
+        --text-muted:    #555555;
+        --border-color:  #cccccc;
+        --input-bg:      #ffffff;
+    }
+    body.dark-mode {
+        --bg-body:       #0a0a0a;
+        --bg-card:       #161616;
+        --bg-card-2:     #1e1e1e;
+        --text-main:     #f0f0f0;
+        --text-muted:    #888888;
+        --border-color:  #333333;
+        --input-bg:      #1a1a1a;
+    }
+    html, body { margin:0; padding:0; background:var(--bg-body); color:var(--text-main); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+    a { color: inherit; }
+    button { font-family: inherit; }
+    #cp-topbar {
+        position:sticky; top:0; z-index:500; background:var(--bg-card); border-bottom:1.5px solid var(--border-color);
+        padding:10px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    }
+    #cp-topbar .cp-back {
+        display:flex; align-items:center; gap:6px; text-decoration:none; font-weight:800; font-size:0.82rem;
+        color:var(--text-main); background:var(--bg-card-2); border:1.5px solid var(--border-color); border-radius:9px; padding:7px 12px;
+    }
+    #cp-topbar .cp-title { font-weight:900; font-size:1rem; flex:1; min-width:120px; }
+    #cp-topbar .cp-title small { display:block; font-weight:600; font-size:0.65rem; color:var(--text-muted); }
+    #cp-user-badge { font-size:0.72rem; font-weight:700; color:var(--text-muted); background:var(--bg-card-2); border-radius:20px; padding:5px 12px; white-space:nowrap; }
+    #cp-dark-toggle, #cp-drive-pill { cursor:pointer; border:1.5px solid var(--border-color); background:var(--bg-card-2); color:var(--text-main); border-radius:9px; padding:7px 11px; font-size:0.8rem; font-weight:700; }
+    #cp-drive-pill.connected { border-color:#27ae60; color:#27ae60; }
+    #cp-drive-pill.error { border-color:#e74c3c; color:#e74c3c; }
+    #cp-login-banner { background:#fff8e1; border-bottom:1.5px solid #f39c1250; color:#92400e; padding:8px 16px; font-size:0.78rem; font-weight:700; text-align:center; }
+    body.dark-mode #cp-login-banner { background:#3a2c00; color:#fcd34d; }
+    #cp-drive-panel { max-width:640px; margin:0 auto; padding:12px 16px 0; }
+    .cp-drive-box { background:var(--bg-card); border:1.5px solid var(--border-color); border-radius:12px; padding:12px 14px; font-size:0.82rem; }
+    .cp-drive-box input { padding:7px 10px; border:1px solid var(--border-color); border-radius:6px; font-size:0.82rem; background:var(--input-bg); color:var(--text-main); }
+    .cp-drive-box button { background:#4caf50; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-size:0.82rem; font-weight:700; cursor:pointer; }
+    .cp-drive-box button.secondary { background:var(--bg-card-2); color:var(--text-main); border:1.5px solid var(--border-color); }
+    #clot-toast-zone { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:99999; display:flex; flex-direction:column; gap:8px; align-items:center; }
+    .clot-toast { background:#222; color:#fff; padding:10px 18px; border-radius:10px; font-size:0.82rem; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,0.3); opacity:0; transform:translateY(10px); transition:all 0.25s; }
+    .clot-toast.show { opacity:1; transform:translateY(0); }
+    .clot-toast.success { background:#166534; }
+    .clot-toast.error   { background:#991b1b; }
+    .clot-toast.info    { background:#1e3a5f; }
+    input, select { font-family: inherit; }
+    table { font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div id="cp-topbar">
+    <a class="cp-back" href="covo_pro.html">← COVO Pro</a>
+    <div class="cp-title">🗓️ Clôtures Pro<small>Module Clôtures de poste — données partagées avec COVO Pro</small></div>
+    <span id="cp-user-badge">👤 —</span>
+    <button id="cp-drive-pill" onclick="cpToggleDrivePanel()">☁️ Google Drive</button>
+    <button id="cp-dark-toggle" onclick="cpToggleDark()">🌙</button>
+</div>
+<div id="cp-login-banner" style="display:none;">⚠️ Aucune session COVO Pro détectée — les actions Modifier/Supprimer sont réservées aux administrateurs connectés. Connectez-vous d'abord dans COVO Pro.</div>
+
+<div id="cp-drive-panel" style="display:none;">
+    <div class="cp-drive-box">
+        <div style="font-weight:900;margin-bottom:8px;">☁️ Sauvegarde automatique Google Drive</div>
+        <div style="color:var(--text-muted);margin-bottom:10px;">Cette app partage la même sauvegarde Drive que COVO Pro (fichiers <code>covo_backup_*.json</code>). Connectez-vous une fois ici (ou laissez faire si déjà connecté depuis COVO Pro).</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+            <input type="text" id="cp-gdrive-client-id" placeholder="Client ID Google (ex: 123…apps.googleusercontent.com)" style="flex:1;min-width:220px;">
+            <button onclick="cpDriveConnect()">🔗 Connecter</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button class="secondary" onclick="cpDriveBackupNow()">💾 Sauvegarder maintenant</button>
+            <button class="secondary" onclick="cpDriveRestoreLatest()">📥 Restaurer la dernière sauvegarde</button>
+            <span id="cp-drive-status" style="font-size:0.74rem;color:var(--text-muted);">Non connecté</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================================== -->
+<!-- ===== ONGLET CLÔTURES (repris de COVO Pro) =========================== -->
+<!-- ===================================================================== -->
+<div id="tab-clotures" style="padding:0;background:var(--bg-body);">
+
+    <div style="background:linear-gradient(135deg,#1a3a5c 0%,#2c3e50 55%,#1abc9c 100%);padding:18px 20px 16px;position:relative;overflow:hidden;border-radius:0 0 16px 16px;">
+        <div style="position:absolute;top:-28px;right:-18px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.06);pointer-events:none;"></div>
+        <div style="position:absolute;bottom:-14px;right:70px;width:65px;height:65px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
+        <div style="position:absolute;top:8px;left:-18px;width:55px;height:55px;border-radius:50%;background:rgba(26,188,156,0.12);pointer-events:none;"></div>
+        <div style="position:relative;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <div style="font-size:1.25rem;font-weight:900;color:#fff;letter-spacing:-0.3px;">🗓️ Clôtures de poste</div>
+                <div style="font-size:0.72rem;color:rgba(255,255,255,0.75);margin-top:3px;">Sessions · Écarts · CA · Activité</div>
+            </div>
+            <div id="clot-header-chips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        </div>
+    </div>
+
+    <div style="padding:14px 16px 20px;">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select id="cloture-filter-period" onchange="_clotPeriodChange()" style="padding:7px 11px;border:1.5px solid var(--border-color,#e0e0e0);border-radius:8px;font-size:0.82rem;background:var(--input-bg,#fff);color:var(--text-main,#2c3e50);">
+                    <option value="7">7 derniers jours</option>
+                    <option value="30" selected>30 derniers jours</option>
+                    <option value="90">3 mois</option>
+                    <option value="all">Tout</option>
+                    <option value="custom">📆 Dates personnalisées</option>
+                </select>
+                <select id="cloture-filter-type" onchange="renderCloturesTab()" style="padding:7px 11px;border:1.5px solid var(--border-color,#e0e0e0);border-radius:8px;font-size:0.82rem;background:var(--input-bg,#fff);color:var(--text-main,#2c3e50);">
+                    <option value="">Tous types</option>
+                    <option value="final">🏁 Finales</option>
+                    <option value="partiel">⏸️ Partielles</option>
+                </select>
+            </div>
+            <button onclick="exportCloturesCSV()" style="background:var(--bg-card,#fff);border:1.5px solid #27ae60;color:#27ae60;padding:7px 14px;border-radius:8px;font-size:0.82rem;cursor:pointer;font-weight:700;">⬇️ Export CSV</button>
+        </div>
+
+        <div id="cloture-date-range" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(52,152,219,0.06);border:1.5px solid rgba(52,152,219,0.25);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-size:0.78rem;font-weight:700;color:#3498db;">📆 Période :</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <label style="font-size:0.72rem;color:var(--gray);font-weight:600;">Du</label>
+                    <input id="cloture-date-from" type="date" onchange="renderCloturesTab()" style="padding:6px 10px;border:1.5px solid var(--border-color,#e0e0e0);border-radius:7px;font-size:0.82rem;background:var(--input-bg,#fff);color:var(--text-main);">
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <label style="font-size:0.72rem;color:var(--gray);font-weight:600;">Au</label>
+                    <input id="cloture-date-to" type="date" onchange="renderCloturesTab()" style="padding:6px 10px;border:1.5px solid var(--border-color,#e0e0e0);border-radius:7px;font-size:0.82rem;background:var(--input-bg,#fff);color:var(--text-main);">
+                </div>
+                <button onclick="_clotSetToday()" style="padding:5px 10px;background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.3);color:#3498db;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Aujourd'hui</button>
+                <button onclick="_clotSetWeek()" style="padding:5px 10px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#8e44ad;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Cette semaine</button>
+                <button onclick="_clotSetMonth()" style="padding:5px 10px;background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.3);color:#e67e22;border-radius:6px;font-size:0.7rem;font-weight:700;cursor:pointer;">Ce mois</button>
+            </div>
+        </div>
+
+        <div id="cloture-stats-row" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+
+        <div id="clot-nav-bar" style="display:flex;align-items:center;justify-content:space-between;
+             margin-bottom:8px;background:var(--bg-card,#fff);border-radius:12px;
+             border:1.5px solid var(--border-color,#eee);padding:7px 12px;">
+          <button onclick="_clotNav(-1)"
+            style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid var(--border-color,#ddd);
+                   border-radius:20px;background:var(--bg-card-2,#f4f7f6);color:var(--text-main,#2c3e50);
+                   font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            ◀ CA par clôture
+          </button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="clot-nav-dot-ca" style="width:8px;height:8px;border-radius:50%;background:#3498db;cursor:pointer;" onclick="_clotFocus('ca')" title="CA par clôture"></span>
+            <span id="clot-nav-dot-both" style="width:8px;height:8px;border-radius:50%;background:var(--border-color,#ccc);cursor:pointer;" onclick="_clotFocus(null)" title="Affichage côte à côte"></span>
+            <span id="clot-nav-dot-ec" style="width:8px;height:8px;border-radius:50%;background:var(--border-color,#ccc);cursor:pointer;" onclick="_clotFocus('ecarts')" title="Écarts de caisse"></span>
+          </div>
+          <button onclick="_clotNav(1)"
+            style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid var(--border-color,#ddd);
+                   border-radius:20px;background:var(--bg-card-2,#f4f7f6);color:var(--text-main,#2c3e50);
+                   font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.15s;">
+            Écarts de caisse ▶
+          </button>
+        </div>
+
+        <div id="clot-charts-row" style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-bottom:16px;transition:grid-template-columns 0.3s;">
+            <div id="clot-card-ca" style="background:var(--bg-card,#fff);border-radius:14px;border:1.5px solid var(--border-color,#eee);padding:14px;overflow:hidden;transition:all 0.3s;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:800;color:var(--text-main,#2c3e50);">📊 CA par clôture</div>
+                        <div style="font-size:0.63rem;color:var(--text-muted,#888);">12 dernières sessions</div>
+                    </div>
+                    <button onclick="_clotFocus('ca')" id="clot-expand-ca"
+                        style="padding:3px 8px;border:1.5px solid var(--border-color,#ddd);border-radius:8px;
+                               background:var(--bg-card-2,#f4f7f6);color:var(--text-muted,#888);
+                               font-size:0.7rem;font-weight:700;cursor:pointer;white-space:nowrap;">⤢ Agrandir</button>
+                </div>
+                <canvas id="clot-chart-ca" style="width:100%;height:160px;display:block;"></canvas>
+            </div>
+            <div id="clot-card-ecarts" style="background:var(--bg-card,#fff);border-radius:14px;border:1.5px solid var(--border-color,#eee);padding:14px;overflow:hidden;transition:all 0.3s;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+                    <div>
+                        <div style="font-size:0.78rem;font-weight:800;color:var(--text-main,#2c3e50);">⚖️ Écarts de caisse</div>
+                        <div style="font-size:0.63rem;color:var(--text-muted,#888);">Esp. · CB · Total — 8 dernières sessions</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+                      <div style="display:flex;gap:3px;background:var(--bg-card-2,#f0f4f8);border-radius:8px;padding:2px;">
+                        <button onclick="_clotSetEcartsMode('divergence')" id="clot-ec-btn-divergence" class="clot-ec-mode-btn" style="padding:3px 8px;border:none;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;background:#9b59b6;color:white;">Divergence</button>
+                        <button onclick="_clotSetEcartsMode('ligne')" id="clot-ec-btn-ligne" class="clot-ec-mode-btn" style="padding:3px 8px;border:none;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;background:transparent;color:var(--text-muted,#888);">Courbe</button>
+                        <button onclick="_clotSetEcartsMode('histo')" id="clot-ec-btn-histo" class="clot-ec-mode-btn" style="padding:3px 8px;border:none;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;background:transparent;color:var(--text-muted,#888);">Histo.</button>
+                        <button onclick="_clotSetEcartsMode('tableau')" id="clot-ec-btn-tableau" class="clot-ec-mode-btn" style="padding:3px 8px;border:none;border-radius:6px;font-size:0.65rem;font-weight:700;cursor:pointer;background:transparent;color:var(--text-muted,#888);">Tableau</button>
+                      </div>
+                      <button onclick="_clotFocus('ecarts')" id="clot-expand-ecarts" style="padding:3px 8px;border:1.5px solid var(--border-color,#ddd);border-radius:8px;background:var(--bg-card-2,#f4f7f6);color:var(--text-muted,#888);font-size:0.7rem;font-weight:700;cursor:pointer;white-space:nowrap;">⤢ Agrandir</button>
+                    </div>
+                </div>
+                <div id="clot-ec-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;"></div>
+                <div id="clot-ec-chart-wrap">
+                  <canvas id="clot-chart-ecarts" style="width:100%;height:185px;display:block;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div style="background:var(--bg-card,#fff);border-radius:14px;border:1.5px solid var(--border-color,#eee);overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border-color,#eee);display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:0.8rem;font-weight:800;color:var(--text-main,#2c3e50);">📋 Détail des clôtures</div>
+                <div id="clot-count-badge" style="font-size:0.68rem;color:var(--text-muted,#888);font-weight:600;"></div>
+            </div>
+            <div style="overflow-x:auto;">
+                <div id="cloture-hist-list"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===== MODAL DÉTAIL CLÔTURE ===== -->
+<div id="clot-detail-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg-card,#fff);border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.22);">
+    <div id="clot-detail-header" style="background:linear-gradient(135deg,#1a5276,#2980b9);padding:18px 20px;border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:1.05rem;font-weight:900;color:#fff;">🏁 Détail de la clôture</div>
+        <div id="clot-detail-subtitle" style="font-size:0.75rem;color:rgba(255,255,255,0.8);margin-top:3px;"></div>
+      </div>
+      <button onclick="document.getElementById('clot-detail-modal').style.display='none'" style="background:rgba(255,255,255,0.15);border:none;color:white;border-radius:8px;width:32px;height:32px;font-size:1.1rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px;">
+      <div id="clot-detail-kpis" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;"></div>
+      <div style="background:var(--bg-body,#f4f7f6);border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+        <div style="font-weight:800;font-size:0.85rem;color:var(--text-main,#2c3e50);margin-bottom:10px;">💰 Détail caisse</div>
+        <div id="clot-detail-caisse" style="display:flex;flex-direction:column;gap:7px;font-size:0.82rem;"></div>
+      </div>
+      <div id="clot-detail-note-wrap" style="display:none;background:rgba(241,196,15,0.08);border:1.5px solid rgba(241,196,15,0.3);border-radius:10px;padding:11px 14px;margin-bottom:14px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#b7950b;margin-bottom:4px;">📝 NOTE</div>
+        <div id="clot-detail-note" style="font-size:0.83rem;color:var(--text-main,#2c3e50);white-space:pre-wrap;"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="document.getElementById('clot-detail-modal').style.display='none'" style="flex:1;padding:10px;background:var(--bg-body,#f4f7f6);border:1.5px solid var(--border-color,#e0e0e0);border-radius:9px;font-weight:700;color:var(--text-main,#2c3e50);cursor:pointer;">Fermer</button>
+        <button onclick="_clotPrintTicket(window._clotDetailId)" style="padding:10px 18px;background:rgba(41,128,185,0.1);border:1.5px solid rgba(41,128,185,0.3);border-radius:9px;font-weight:700;color:#2980b9;cursor:pointer;">🖨️ Ticket</button>
+        <button id="clot-detail-edit-btn" onclick="document.getElementById('clot-detail-modal').style.display='none';setTimeout(()=>{if(typeof window._clotDetailId!=='undefined')window._clotOpenEdit(window._clotDetailId);},50)" style="padding:10px 18px;background:rgba(52,152,219,0.1);border:1.5px solid rgba(52,152,219,0.3);border-radius:9px;font-weight:700;color:#2980b9;cursor:pointer;">✏️ Modifier</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL MODIFICATION CLÔTURE (nouveau, fonctionnel) ===== -->
+<div id="clot-edit-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;z-index:9991;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg-card,#fff);border-radius:18px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <div style="background:linear-gradient(135deg,#3498db,#2980b9);padding:16px 20px;border-radius:18px 18px 0 0;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:1rem;font-weight:900;color:#fff;">✏️ Modifier la clôture</div>
+        <div id="clot-edit-title-date" style="font-size:0.74rem;color:rgba(255,255,255,0.8);margin-top:2px;"></div>
+      </div>
+      <button onclick="document.getElementById('clot-edit-modal').style.display='none'" style="background:rgba(255,255,255,0.15);border:none;color:white;border-radius:8px;width:30px;height:30px;font-size:1.05rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.8rem;">
+      <label style="grid-column:1/-1;">Date<input id="clot-edit-date" type="date" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label style="grid-column:1/-1;">Caissier<input id="clot-edit-caissier" type="text" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Type
+        <select id="clot-edit-type" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;">
+          <option value="final">🏁 Finale</option>
+          <option value="partiel">⏸️ Partielle</option>
+        </select>
+      </label>
+      <label>Prise de poste<input id="clot-edit-prise" type="text" placeholder="hh:mm" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Fond de caisse (€)<input id="clot-edit-fond" type="number" step="0.01" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Nb ventes<input id="clot-edit-nb-ventes" type="number" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Nb retours<input id="clot-edit-nb-retours" type="number" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>CA du jour (€)<input id="clot-edit-total" type="number" step="0.01" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Théorique espèces (€)<input id="clot-edit-theor-esp" type="number" step="0.01" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Reçu espèces (€)<input id="clot-edit-recu-esp" type="number" step="0.01" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Théorique CB (€)<input id="clot-edit-theor-cb" type="number" step="0.01" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label>Reçu CB (€)<input id="clot-edit-recu-cb" type="number" step="0.01" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;"></label>
+      <label style="grid-column:1/-1;">Note<textarea id="clot-edit-note" rows="2" style="width:100%;padding:7px 9px;border:1px solid var(--border-color);border-radius:7px;background:var(--input-bg);color:var(--text-main);margin-top:3px;resize:vertical;"></textarea></label>
+    </div>
+    <div style="padding:12px 20px 18px;display:flex;gap:8px;">
+      <button onclick="document.getElementById('clot-edit-modal').style.display='none'" style="flex:1;padding:10px;background:var(--bg-body,#f4f7f6);border:1.5px solid var(--border-color);border-radius:9px;font-weight:700;color:var(--text-main);cursor:pointer;">Annuler</button>
+      <button onclick="_clotSaveEdit()" style="flex:1;padding:10px;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;border-radius:9px;font-weight:800;cursor:pointer;">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL CONFIGURATION IMPRESSION TICKET ===== -->
+<div id="clot-print-cfg-modal" style="display:none;position:fixed;inset:0;z-index:9995;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:12px;">
+  <div style="background:#fff;border-radius:16px;width:min(820px,98vw);max-height:95vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.4);overflow:hidden;">
+    <div style="padding:14px 20px;background:#111;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;">
+      <div style="color:#fff;font-weight:900;font-size:1rem;">🖨️ Configuration du ticket</div>
+      <button onclick="document.getElementById('clot-print-cfg-modal').style.display='none'" style="background:rgba(255,255,255,0.15);border:none;color:white;border-radius:8px;width:32px;height:32px;font-size:1.1rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;flex:1;overflow:hidden;flex-wrap:wrap;">
+      <div style="flex:1;min-width:260px;background:#e8e8e8;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-y:auto;">
+        <div style="font-size:0.68rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:10px;">Prévisualisation</div>
+        <iframe id="clot-print-preview" style="width:320px;min-height:480px;border:1px solid #bbb;border-radius:4px;background:white;box-shadow:0 2px 12px rgba(0,0,0,0.15);" scrolling="auto"></iframe>
+      </div>
+      <div style="width:240px;flex-shrink:0;border-left:1px solid #e0e0e0;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <div style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:8px;">Mode couleur</div>
+          <div style="display:flex;gap:6px;">
+            <button id="btn-print-col" onclick="_clotPrintCfgSet('color','couleurs')" style="flex:1;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.78rem;font-weight:700;background:#f4f4f4;color:#111;">🎨 Couleurs</button>
+            <button id="btn-print-bw" onclick="_clotPrintCfgSet('color','bw')" style="flex:1;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.78rem;font-weight:700;background:#f4f4f4;color:#111;">⬛ N&amp;B</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:8px;">Police</div>
+          <select id="sel-print-font" onchange="_clotPrintCfgSet('font', this.value)" style="width:100%;padding:7px 9px;border:1.5px solid #ccc;border-radius:7px;font-size:0.8rem;font-weight:700;background:#fff;color:#111;">
+            <option value='"Courier New",Courier,monospace'>Courier New (thermique)</option>
+            <option value="Arial,Helvetica,sans-serif">Arial (moderne)</option>
+            <option value="Georgia,serif">Georgia (classique)</option>
+            <option value='"Times New Roman",Times,serif'>Times New Roman</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:8px;">Taille du texte</div>
+          <div style="display:flex;gap:5px;">
+            <button id="btn-print-sm" onclick="_clotPrintCfgSet('size','small')" style="flex:1;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.72rem;font-weight:700;background:#f4f4f4;color:#111;">A-</button>
+            <button id="btn-print-nm" onclick="_clotPrintCfgSet('size','normal')" style="flex:1;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:700;background:#f4f4f4;color:#111;">A</button>
+            <button id="btn-print-lg" onclick="_clotPrintCfgSet('size','large')" style="flex:1;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.92rem;font-weight:700;background:#f4f4f4;color:#111;">A+</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:8px;">Graisse</div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <button id="btn-print-w1" onclick="_clotPrintCfgSet('weight','normal')" style="width:100%;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-weight:400;font-size:0.82rem;background:#f4f4f4;color:#111;">Normal</button>
+            <button id="btn-print-w2" onclick="_clotPrintCfgSet('weight','bold')" style="width:100%;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-weight:700;font-size:0.82rem;background:#f4f4f4;color:#111;">Gras</button>
+            <button id="btn-print-w3" onclick="_clotPrintCfgSet('weight','extrabold')" style="width:100%;padding:7px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-weight:900;font-size:0.82rem;background:#f4f4f4;color:#111;">Extra gras</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;font-weight:800;color:#888;text-transform:uppercase;margin-bottom:8px;">Format papier</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;">
+            <button id="btn-print-80" onclick="_clotPrintCfgSet('format','80mm')" style="flex:1;min-width:50px;padding:7px 4px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.74rem;font-weight:700;background:#f4f4f4;color:#111;">80mm</button>
+            <button id="btn-print-57" onclick="_clotPrintCfgSet('format','57mm')" style="flex:1;min-width:60px;padding:7px 4px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.74rem;font-weight:700;background:#f4f4f4;color:#111;">57×18mm</button>
+            <button id="btn-print-a4" onclick="_clotPrintCfgSet('format','a4')" style="flex:1;min-width:50px;padding:7px 4px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.74rem;font-weight:700;background:#f4f4f4;color:#111;">A4</button>
+          </div>
+          <div id="custom-format-list" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;"></div>
+          <div style="margin-top:9px;padding:8px;background:#2a2a2a;border-radius:8px;border:1px dashed #555;">
+            <div style="font-size:0.6rem;font-weight:800;color:#aaa;text-transform:uppercase;margin-bottom:6px;">Ajouter un format</div>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <input id="fmt-w-input" type="number" placeholder="L" min="20" max="400" style="width:44px;padding:5px 3px;border:1.5px solid #555;border-radius:6px;font-size:0.8rem;font-weight:700;text-align:center;color:#fff;background:#333;">
+              <span style="font-size:0.85rem;font-weight:900;color:#aaa;">×</span>
+              <input id="fmt-h-input" type="number" placeholder="H" min="10" max="600" style="width:44px;padding:5px 3px;border:1.5px solid #555;border-radius:6px;font-size:0.8rem;font-weight:700;text-align:center;color:#fff;background:#333;">
+              <span style="font-size:0.65rem;color:#aaa;font-weight:600;">mm</span>
+              <button onclick="_clotAddCustomFormat()" style="flex:1;padding:6px 5px;background:#111;color:#fff;border:none;border-radius:6px;font-size:0.8rem;font-weight:800;cursor:pointer;">+ OK</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid #e0e0e0;display:flex;justify-content:flex-end;gap:8px;background:#f4f4f4;border-radius:0 0 16px 16px;">
+      <button onclick="document.getElementById('clot-print-cfg-modal').style.display='none'" style="padding:10px 18px;background:#fff;border:1.5px solid #ccc;border-radius:9px;font-weight:700;cursor:pointer;">Annuler</button>
+      <button onclick="_clotDoPrint()" style="padding:10px 26px;background:#111;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:0.9rem;cursor:pointer;">🖨️ Imprimer</button>
+    </div>
+  </div>
+</div>
+
+<div id="clot-toast-zone"></div>
+
+<script>
+/* =====================================================================
+   CLÔTURES PRO — module compagnon de COVO Pro
+   Lit/écrit les MÊMES clés localStorage que COVO Pro (même origine =
+   mêmes données, aucune duplication) et partage la même sauvegarde
+   Google Drive (fichiers covo_backup_*.json).
+   ===================================================================== */
+
+// ── Utilitaires ────────────────────────────────────────────────────────
+function showScanToast(msg, type) {
+    var zone = document.getElementById('clot-toast-zone');
+    var el = document.createElement('div');
+    el.className = 'clot-toast' + (type ? ' ' + type : '');
+    el.textContent = msg;
+    zone.appendChild(el);
+    requestAnimationFrame(function(){ el.classList.add('show'); });
+    setTimeout(function(){ el.classList.remove('show'); setTimeout(function(){ el.remove(); }, 300); }, 3200);
+}
+
+function _covoCurrentUser() {
+    try { return JSON.parse(localStorage.getItem('covo_current_user') || 'null'); } catch(e) { return null; }
+}
+var currentUser = _covoCurrentUser();
+var appSettings = (function(){ try { return JSON.parse(localStorage.getItem('covo_settings') || '{}'); } catch(e) { return {}; } })();
+
+function cpIsAdmin() {
+    var u = currentUser;
+    return !!(u && (u.role === 'admin' || u.isMaster || u.id === 'USR-MASTER'));
+}
+
+function cpRefreshUserBadge() {
+    currentUser = _covoCurrentUser();
+    var badge = document.getElementById('cp-user-badge');
+    var banner = document.getElementById('cp-login-banner');
+    if (currentUser) {
+        badge.textContent = '👤 ' + (currentUser.name || currentUser.username || currentUser.id) + (cpIsAdmin() ? ' · admin' : '');
+        banner.style.display = 'none';
+    } else {
+        badge.textContent = '👤 Non connecté';
+        banner.style.display = '';
+    }
+    document.querySelectorAll('.cp-admin-only').forEach(function(el){ el.style.display = cpIsAdmin() ? '' : 'none'; });
+}
+
+function cpToggleDark() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('covo_dark_mode', document.body.classList.contains('dark-mode') ? '1' : '0');
+    var h = _loadCaisseHistorique();
+    if (typeof _clotDrawCharts === 'function') _clotDrawCharts(_clotFilterCurrent(h));
+}
+(function cpInitDark(){
+    if (localStorage.getItem('covo_dark_mode') === '1') document.body.classList.add('dark-mode');
+})();
+
+// ── Stockage clôtures (identique à COVO Pro) ────────────────────────────
+var _CAISSE_KEY = 'covo_caisse_historique';
+function _loadCaisseHistorique() {
+    try { return JSON.parse(localStorage.getItem(_CAISSE_KEY) || '[]'); } catch(e) { return []; }
+}
+function _saveCaisseHistorique(hist) {
+    localStorage.setItem(_CAISSE_KEY, JSON.stringify(hist));
+    cpDriveMarkDirty();
+}
+
+function _setupHiDpiCanvas(canvas, W, H) {
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return ctx;
+}
+
+function _clotDay(h){
+    if (h && h.date) { var dd = new Date(h.date + 'T12:00:00'); if (!isNaN(dd.getTime())) return dd; }
+    return new Date(h ? h.datetime : Date.now());
+}
+
+function _clotFilterCurrent(hist) {
+    var period = (document.getElementById('cloture-filter-period') || {}).value || '30';
+    var typeF  = (document.getElementById('cloture-filter-type') || {}).value || '';
+    var now = new Date();
+    var filtered = hist;
+    if (period === 'custom') {
+        var fromVal = (document.getElementById('cloture-date-from') || {}).value || '';
+        var toVal   = (document.getElementById('cloture-date-to') || {}).value || '';
+        if (fromVal) { var fromDate = new Date(fromVal + 'T00:00:00'); filtered = filtered.filter(function(h) { return _clotDay(h) >= fromDate; }); }
+        if (toVal)   { var toDate = new Date(toVal + 'T23:59:59'); filtered = filtered.filter(function(h) { return _clotDay(h) <= toDate; }); }
+    } else if (period !== 'all') {
+        var days = parseInt(period);
+        var cutoff = new Date(now.getTime() - days * 86400000);
+        filtered = hist.filter(function(h) { return _clotDay(h) >= cutoff; });
+    }
+    if (typeF === 'final')   filtered = filtered.filter(function(h) { return !h.partiel; });
+    else if (typeF === 'partiel') filtered = filtered.filter(function(h) { return h.partiel; });
+    return filtered;
+}
+
+function renderCloturesTab() {
+    var hist = _loadCaisseHistorique();
+    var filtered = _clotFilterCurrent(hist);
+
+    var nbClotures  = filtered.length;
+    var nbFinales   = filtered.filter(function(h) { return !h.partiel; }).length;
+    var totalCA     = filtered.reduce(function(s, h) { return s + (h.totalJour || 0); }, 0);
+    var totalVentes = filtered.reduce(function(s, h) { return s + (h.nbVentes || 0); }, 0);
+    var totalEcartEsp = 0, nbEcartEsp = 0, totalEcartCb = 0, nbEcartCb = 0;
+    filtered.forEach(function(h) {
+        if (h.ecartEsp != null) { totalEcartEsp += h.ecartEsp; nbEcartEsp++; }
+        if (h.ecartCb  != null) { totalEcartCb  += h.ecartCb;  nbEcartCb++;  }
+    });
+    var avgEcartEsp = nbEcartEsp > 0 ? totalEcartEsp / nbEcartEsp : 0;
+    var avgEcartCb  = nbEcartCb  > 0 ? totalEcartCb  / nbEcartCb  : 0;
+    var avgCA       = nbClotures > 0 ? totalCA / nbClotures : 0;
+    var now = new Date();
+
+    var chipsEl = document.getElementById('clot-header-chips');
+    if (chipsEl) {
+        var chipStyle = 'display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.13);border:1px solid rgba(255,255,255,0.22);border-radius:8px;padding:5px 11px;font-size:0.72rem;color:#fff;font-weight:700;';
+        chipsEl.innerHTML =
+            '<span style="'+chipStyle+'">📋 '+nbClotures+' clôture'+(nbClotures>1?'s':'')+'</span>' +
+            '<span style="'+chipStyle+'">💰 '+totalCA.toFixed(2)+' €</span>' +
+            '<span style="'+chipStyle+'">🛒 '+totalVentes+' vente'+(totalVentes>1?'s':'')+'</span>';
+    }
+
+    var statsEl = document.getElementById('cloture-stats-row');
+    if (statsEl) {
+        var ecEspCol = Math.abs(avgEcartEsp) < 0.5 ? '#27ae60' : avgEcartEsp > 0 ? '#f39c12' : '#e74c3c';
+        var ecCbCol  = Math.abs(avgEcartCb)  < 0.5 ? '#27ae60' : avgEcartCb  > 0 ? '#f39c12' : '#e74c3c';
+        var sh = '';
+        sh += _clotStatCard('📅', nbClotures, 'Clôtures', '#3498db');
+        sh += _clotStatCard('🏁', nbFinales, 'Finales', '#27ae60');
+        sh += _clotStatCard('💰', totalCA.toFixed(2)+' €', 'CA total', '#9b59b6');
+        sh += _clotStatCard('📈', avgCA.toFixed(2)+' €', 'CA moyen/poste', '#1abc9c');
+        sh += _clotStatCard('🛒', totalVentes, 'Ventes', '#e67e22');
+        sh += _clotStatCard('💵', (avgEcartEsp >= 0 ? '+' : '')+avgEcartEsp.toFixed(2)+' €', 'Écart esp. moy.', ecEspCol);
+        sh += _clotStatCard('💳', (avgEcartCb  >= 0 ? '+' : '')+avgEcartCb.toFixed(2)+' €',  'Écart CB moy.',   ecCbCol);
+        statsEl.innerHTML = sh;
+    }
+
+    _clotDrawCharts(filtered);
+
+    var badge = document.getElementById('clot-count-badge');
+    if (badge) badge.textContent = nbClotures + ' enregistrement' + (nbClotures !== 1 ? 's' : '');
+
+    var listEl = document.getElementById('cloture-hist-list');
+    if (!listEl) return;
+    if (!filtered.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray,#888);font-size:0.85rem;">📂 Aucune clôture pour cette période</div>';
+        return;
+    }
+
+    var isAdm = cpIsAdmin();
+    var sorted = filtered.slice().sort(function(a, b) { var db=_clotDay(b)-_clotDay(a); return db!==0 ? db : (new Date(b.datetime||0) - new Date(a.datetime||0)); });
+
+    var thStyle  = 'padding:9px 10px;text-align:left;font-size:0.63rem;font-weight:800;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;';
+    var thStyleR = thStyle + 'text-align:right;';
+    var thStyleC = thStyle + 'text-align:center;';
+
+    var t = '<table style="width:100%;border-collapse:collapse;min-width:820px;">';
+    t += '<thead><tr style="background:var(--bg-body,#f4f7f6);border-bottom:2px solid var(--border-color,#e0e0e0);">';
+    t += '<th style="'+thStyle+'">📅 Date & Poste</th>';
+    t += '<th style="'+thStyle+'">👤 Caissier</th>';
+    t += '<th style="'+thStyleC+'">Type</th>';
+    t += '<th style="'+thStyleR+'">💰 CA Jour</th>';
+    t += '<th style="'+thStyleR+'">💵 Espèces</th>';
+    t += '<th style="'+thStyleR+'">💳 CB</th>';
+    t += '<th style="'+thStyleR+'">🏦 Total reçu</th>';
+    t += '<th style="'+thStyleC+'">⚖️ Écarts</th>';
+    t += '<th style="'+thStyleC+'">🛒 Ventes</th>';
+    t += '<th style="'+thStyleC+'">🖨️</th>';
+    if (isAdm) t += '<th style="'+thStyleC+'">Actions</th>';
+    t += '</tr></thead><tbody>';
+
+    sorted.forEach(function(h, idx) {
+        var d = new Date(h.datetime);
+        var bizDate = _clotDay(h);
+        var dateStr = bizDate.toLocaleDateString('fr-FR', {weekday:'short', day:'2-digit', month:'short'});
+        var yearStr = bizDate.getFullYear() !== now.getFullYear() ? ' ' + bizDate.getFullYear() : '';
+        var timeStr = d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        var _backDated = h.date && (bizDate.toDateString() !== d.toDateString());
+
+        var dureeStr = '';
+        if (h.prisePoste) {
+            var parts = h.prisePoste.split(':');
+            if (parts.length >= 2) {
+                var priseDate = new Date(d);
+                priseDate.setHours(parseInt(parts[0],10), parseInt(parts[1],10), 0, 0);
+                if (priseDate > d) priseDate.setDate(priseDate.getDate() - 1);
+                var diffMin = Math.round((d - priseDate) / 60000);
+                if (diffMin > 0 && diffMin < 1440) {
+                    var dh = Math.floor(diffMin/60), dm = diffMin%60;
+                    dureeStr = dh > 0 ? dh+'h'+(dm>0?String(dm).padStart(2,'0'):'') : dm+'min';
+                }
+            }
+        }
+
+        var ecEspC = h.ecartEsp != null ? (Math.abs(h.ecartEsp) < 0.01 ? '#27ae60' : h.ecartEsp > 0 ? '#f39c12' : '#e74c3c') : null;
+        var ecCbC  = h.ecartCb  != null ? (Math.abs(h.ecartCb)  < 0.01 ? '#2980b9' : h.ecartCb  > 0 ? '#f39c12' : '#e74c3c') : null;
+        var totalRecu = (h.recuEsp != null ? h.recuEsp : 0) + (h.recuCb != null ? h.recuCb : 0);
+        var hasRecu = h.recuEsp != null || h.recuCb != null;
+        var ecTot = (h.ecartEsp != null ? h.ecartEsp : 0) + (h.ecartCb != null ? h.ecartCb : 0);
+        var hasEcTot = h.ecartEsp != null || h.ecartCb != null;
+        var ecTotC = !hasEcTot ? null : (Math.abs(ecTot) < 0.02 ? '#27ae60' : ecTot > 0 ? '#f39c12' : '#e74c3c');
+
+        var leftBorder = h.partiel ? '3px solid #f39c12' : '3px solid #27ae60';
+        var rowBg = idx % 2 === 0 ? 'var(--bg-card,#fff)' : 'var(--bg-body,#fafbfc)';
+
+        t += '<tr style="border-left:'+leftBorder+';background:'+rowBg+';border-bottom:1px solid var(--border-color,#f0f0f0);cursor:pointer;" onclick="_clotShowDetail(\''+h.id+'\')">';
+
+        t += '<td style="padding:8px 10px;min-width:118px;">';
+        t += '<div style="font-weight:700;font-size:0.78rem;color:var(--text-main,#2c3e50);">'+dateStr+yearStr+'</div>';
+        t += '<div style="font-size:0.67rem;color:var(--text-muted,#888);margin-top:1px;">🏁 Fin : '+timeStr+'</div>';
+        if (_backDated) t += '<div style="font-size:0.6rem;color:#e67e22;margin-top:1px;font-weight:700;">📝 Clôture de veille · saisie le '+d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+'</div>';
+        if (h.prisePoste) t += '<div style="font-size:0.63rem;color:#8e44ad;margin-top:1px;">▶ Début : '+h.prisePoste+(dureeStr ? ' <span style="background:rgba(142,68,173,0.1);color:#8e44ad;border-radius:4px;padding:0 4px;font-weight:700;">('+dureeStr+')</span>' : '')+'</div>';
+        if (h.fondCaisse > 0) t += '<div style="font-size:0.62rem;color:#1abc9c;margin-top:1px;">🪙 Fond : '+h.fondCaisse.toFixed(2)+' €</div>';
+        t += '</td>';
+
+        var ini = (h.caissier || 'I').charAt(0).toUpperCase();
+        t += '<td style="padding:8px 10px;"><div style="display:flex;align-items:center;gap:7px;">';
+        t += '<span style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#2c3e50,#1abc9c);color:white;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+ini+'</span>';
+        t += '<div><div style="font-size:0.78rem;font-weight:700;color:var(--text-main);">'+(h.caissier||'Inconnu')+'</div>';
+        t += '<div style="font-size:0.6rem;color:var(--text-muted,#aaa);font-family:monospace;">'+(h.id||'')+'</div></div></div></td>';
+
+        var typeBadge = h.partiel
+            ? '<span style="font-size:0.6rem;font-weight:800;background:#fff8e1;color:#e67e22;padding:2px 7px;border-radius:5px;border:1px solid #f39c1230;white-space:nowrap;">⏸ PARTIELLE</span>'
+            : '<span style="font-size:0.6rem;font-weight:800;background:#e8f5e9;color:#27ae60;padding:2px 7px;border-radius:5px;border:1px solid #27ae6030;white-space:nowrap;">🏁 FINALE</span>';
+        t += '<td style="padding:8px 10px;text-align:center;">'+typeBadge+'</td>';
+
+        t += '<td style="padding:8px 10px;text-align:right;"><div style="font-size:0.92rem;font-weight:900;color:#8e44ad;">'+(h.totalJour||0).toFixed(2)+' €</div>';
+        if (h.nbVentes) t += '<div style="font-size:0.6rem;color:var(--text-muted,#888);margin-top:1px;">'+(((h.totalJour||0)/(h.nbVentes)).toFixed(2))+' €/vte</div>';
+        t += '</td>';
+
+        t += '<td style="padding:8px 10px;text-align:right;"><div style="font-size:0.78rem;font-weight:700;color:var(--text-main);">'+(h.theorEsp||0).toFixed(2)+' €</div>';
+        t += h.recuEsp != null ? '<div style="font-size:0.63rem;color:var(--text-muted,#888);">Reçu : '+h.recuEsp.toFixed(2)+' €</div>' : '<div style="font-size:0.6rem;color:var(--text-muted,#bbb);font-style:italic;">Non compté</div>';
+        if (ecEspC) t += '<div style="margin-top:2px;"><span style="font-size:0.62rem;font-weight:700;color:white;background:'+ecEspC+';padding:1px 6px;border-radius:4px;">'+((h.ecartEsp>=0?'+':'')+h.ecartEsp.toFixed(2)+' €')+'</span></div>';
+        t += '</td>';
+
+        t += '<td style="padding:8px 10px;text-align:right;"><div style="font-size:0.78rem;font-weight:700;color:var(--text-main);">'+(h.theorCb||0).toFixed(2)+' €</div>';
+        t += h.recuCb != null ? '<div style="font-size:0.63rem;color:var(--text-muted,#888);">Reçu : '+h.recuCb.toFixed(2)+' €</div>' : '<div style="font-size:0.6rem;color:var(--text-muted,#bbb);font-style:italic;">Non compté</div>';
+        if (ecCbC) t += '<div style="margin-top:2px;"><span style="font-size:0.62rem;font-weight:700;color:white;background:'+ecCbC+';padding:1px 6px;border-radius:4px;">'+((h.ecartCb>=0?'+':'')+h.ecartCb.toFixed(2)+' €')+'</span></div>';
+        t += '</td>';
+
+        t += '<td style="padding:8px 10px;text-align:right;">';
+        if (hasRecu) {
+            var totalTheor = (h.theorEsp||0) + (h.theorCb||0);
+            t += '<div style="font-size:0.85rem;font-weight:900;color:#2c3e50;">'+totalRecu.toFixed(2)+' €</div><div style="font-size:0.6rem;color:var(--text-muted,#888);">Théo : '+totalTheor.toFixed(2)+' €</div>';
+        } else t += '<span style="font-size:0.72rem;color:var(--text-muted,#bbb);font-style:italic;">—</span>';
+        t += '</td>';
+
+        t += '<td style="padding:8px 10px;text-align:center;">';
+        if (hasEcTot) {
+            var espLine = h.ecartEsp != null ? ((h.ecartEsp>=0?'+':'')+h.ecartEsp.toFixed(2)) : '?';
+            var cbLine  = h.ecartCb  != null ? ((h.ecartCb >=0?'+':'')+h.ecartCb.toFixed(2)) : '?';
+            t += '<div style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;"><span style="font-size:0.75rem;font-weight:800;color:white;background:'+ecTotC+';padding:2px 10px;border-radius:6px;white-space:nowrap;">'+((ecTot>=0?'+':'')+ecTot.toFixed(2)+' €')+'</span><span style="font-size:0.58rem;color:var(--text-muted,#888);">💵'+espLine+' | 💳'+cbLine+'</span></div>';
+        } else t += '<span style="font-size:0.72rem;color:var(--text-muted,#bbb);">—</span>';
+        t += '</td>';
+
+        t += '<td style="padding:8px 10px;text-align:center;"><div style="font-size:0.9rem;font-weight:800;color:var(--text-main);">'+(h.nbVentes||0)+'</div>';
+        if (h.nbRetours) t += '<div style="font-size:0.62rem;color:#e74c3c;margin-top:1px;">↩ '+h.nbRetours+' retour'+(h.nbRetours>1?'s':'')+'</div>';
+        if (h.note) t += '<div style="font-size:0.6rem;color:#3498db;max-width:75px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:2px auto 0;" title="'+h.note+'">💬 '+h.note+'</div>';
+        t += '</td>';
+
+        t += '<td style="padding:8px 10px;text-align:center;">';
+        t += '<button onclick="event.stopPropagation();_clotPrintTicket(\''+h.id+'\')" style="padding:4px 9px;background:rgba(41,128,185,0.08);border:1px solid rgba(41,128,185,0.3);color:#2980b9;border-radius:6px;font-size:0.68rem;cursor:pointer;font-weight:700;" title="Imprimer le ticket de clôture">🖨️ Ticket</button>';
+        t += '</td>';
+
+        if (isAdm) {
+            t += '<td style="padding:8px 10px;text-align:center;white-space:nowrap;">';
+            t += '<button onclick="event.stopPropagation();_clotOpenEdit(\''+h.id+'\')" style="padding:3px 9px;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.3);color:#3498db;border-radius:5px;font-size:0.65rem;cursor:pointer;font-weight:700;margin-right:3px;">✏️</button>';
+            t += '<button onclick="event.stopPropagation();_clotDelete(\''+h.id+'\')" style="padding:3px 9px;background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.3);color:#e74c3c;border-radius:5px;font-size:0.65rem;cursor:pointer;font-weight:700;">🗑️</button>';
+            t += '</td>';
+        }
+        t += '</tr>';
+    });
+
+    t += '</tbody></table>';
+    listEl.innerHTML = t;
+}
+
+function _clotStatCard(icon, value, label, color) {
+    return '<div style="background:'+color+'12;border:1.5px solid '+color+'35;border-radius:11px;padding:10px 12px;text-align:center;">' +
+        '<div style="font-size:1.1rem;line-height:1.2;">'+icon+'</div>' +
+        '<div style="font-size:1.0rem;font-weight:900;color:'+color+';margin-top:3px;">'+value+'</div>' +
+        '<div style="font-size:0.63rem;font-weight:600;color:var(--text-muted,#888);margin-top:2px;">'+label+'</div></div>';
+}
+
+// ── Charts (CA + Écarts multi-mode) ──────────────────────────────────────
+window._clotEcartsMode = 'divergence';
+var _clotFocused = null;
+
+window._clotSetEcartsMode = function(mode) {
+    window._clotEcartsMode = mode;
+    ['divergence','ligne','histo','tableau'].forEach(function(m) {
+        var btn = document.getElementById('clot-ec-btn-'+m);
+        if (!btn) return;
+        if (m === mode) { btn.style.background = '#9b59b6'; btn.style.color = 'white'; }
+        else { btn.style.background = 'transparent'; btn.style.color = 'var(--text-muted,#888)'; }
+    });
+    var wrap = document.getElementById('clot-ec-chart-wrap');
+    if (wrap && mode !== 'tableau' && !wrap.querySelector('canvas')) {
+        wrap.innerHTML = '<canvas id="clot-chart-ecarts" style="width:100%;height:185px;display:block;"></canvas>';
+    }
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ _clotDrawCharts(_clotFilterCurrent(_loadCaisseHistorique())); }); });
+};
+
+window._clotFocus = function(which) {
+    var row = document.getElementById('clot-charts-row'), cardCA = document.getElementById('clot-card-ca'),
+        cardEC = document.getElementById('clot-card-ecarts'), btnCA = document.getElementById('clot-expand-ca'), btnEC = document.getElementById('clot-expand-ecarts');
+    if (!row || !cardCA || !cardEC) return;
+    if (_clotFocused === which) which = null;
+    _clotFocused = which;
+    if (which === 'ca') {
+        cardEC.style.display = 'none'; cardCA.style.display = ''; row.style.gridTemplateColumns = '1fr';
+        if (btnCA) { btnCA.textContent = '⊡ Réduire'; btnCA.style.color = '#3498db'; btnCA.style.borderColor = '#3498db'; }
+        if (btnEC) { btnEC.textContent = '⤢ Agrandir'; btnEC.style.color = ''; btnEC.style.borderColor = ''; }
+    } else if (which === 'ecarts') {
+        cardCA.style.display = 'none'; cardEC.style.display = ''; row.style.gridTemplateColumns = '1fr';
+        if (btnEC) { btnEC.textContent = '⊡ Réduire'; btnEC.style.color = '#9b59b6'; btnEC.style.borderColor = '#9b59b6'; }
+        if (btnCA) { btnCA.textContent = '⤢ Agrandir'; btnCA.style.color = ''; btnCA.style.borderColor = ''; }
+    } else {
+        cardCA.style.display = ''; cardEC.style.display = ''; row.style.gridTemplateColumns = '1.6fr 1fr';
+        if (btnCA) { btnCA.textContent = '⤢ Agrandir'; btnCA.style.color = ''; btnCA.style.borderColor = ''; }
+        if (btnEC) { btnEC.textContent = '⤢ Agrandir'; btnEC.style.color = ''; btnEC.style.borderColor = ''; }
+    }
+    var dotCA = document.getElementById('clot-nav-dot-ca'), dotBoth = document.getElementById('clot-nav-dot-both'), dotEC = document.getElementById('clot-nav-dot-ec');
+    if (dotCA)   dotCA.style.background   = which === 'ca'     ? '#3498db' : 'var(--border-color,#ccc)';
+    if (dotBoth) dotBoth.style.background = which === null     ? '#3498db' : 'var(--border-color,#ccc)';
+    if (dotEC)   dotEC.style.background   = which === 'ecarts' ? '#9b59b6' : 'var(--border-color,#ccc)';
+    requestAnimationFrame(function() { requestAnimationFrame(function() { _clotDrawCharts(_clotFilterCurrent(_loadCaisseHistorique())); }); });
+};
+
+window._clotNav = function(dir) {
+    var order = [null, 'ca', 'ecarts'];
+    var idx = order.indexOf(_clotFocused);
+    var next = order[(idx + dir + order.length) % order.length];
+    _clotFocus(next === _clotFocused ? null : next);
+};
+
+function _clotDrawCharts(filtered) {
+    var isDark = document.body.classList.contains('dark-mode');
+    var textCol  = isDark ? '#c8d8f8' : '#2c3e50';
+    var mutedCol = isDark ? 'rgba(200,216,248,0.55)' : 'rgba(44,62,80,0.45)';
+    var gridCol  = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.07)';
+
+    var sorted = filtered.slice().sort(function(a,b){ return new Date(a.datetime)-new Date(b.datetime); });
+    var recent = sorted.slice(-12);
+
+    var cCA = document.getElementById('clot-chart-ca');
+    if (cCA) {
+        var labCA  = recent.map(function(h){ var d=new Date(h.datetime); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); });
+        var dataCA = recent.map(function(h){ return h.totalJour||0; });
+        cCA.style.width = '100%';
+        var _caParW = cCA.parentElement ? cCA.parentElement.clientWidth - 28 : 0;
+        var W = _caParW > 80 ? _caParW : (cCA.offsetWidth || 400);
+        var H = (_clotFocused==='ca' ? 280 : 160);
+        cCA.style.height = H+'px';
+        var ctx=_setupHiDpiCanvas(cCA,W,H);
+        ctx.clearRect(0,0,W,H);
+        var PAD={top:24,right:12,bottom:34,left:50};
+        var CW=W-PAD.left-PAD.right, CH=H-PAD.top-PAD.bottom;
+        var n=labCA.length||1;
+        var maxV=Math.max.apply(null,dataCA.concat([1]));
+        var niceMax = (function(v){ var mag=Math.pow(10,Math.floor(Math.log10(v||1))); return Math.ceil(v/mag)*mag; })(maxV);
+        var steps=3;
+        for(var g=0;g<=steps;g++){
+            var gy=PAD.top+CH*g/steps;
+            ctx.strokeStyle=gridCol; ctx.lineWidth=1; ctx.setLineDash(g===steps?[]:[3,4]);
+            ctx.beginPath(); ctx.moveTo(PAD.left,gy); ctx.lineTo(PAD.left+CW,gy); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle=mutedCol; ctx.font='bold 10px sans-serif'; ctx.textAlign='right';
+            var yVal=Math.round(niceMax*(steps-g)/steps);
+            ctx.fillText(yVal>=1000?(yVal/1000).toFixed(1)+'k':yVal, PAD.left-4, gy+4);
+        }
+        var slotW=CW/n, bw=Math.max(10,slotW*0.65);
+        for(var bi=0;bi<n;bi++){
+            var bx=PAD.left+bi*slotW+(slotW-bw)/2;
+            var bh=dataCA[bi]?Math.max(4,(dataCA[bi]/niceMax)*CH):2;
+            var by=PAD.top+CH-bh;
+            var gr=ctx.createLinearGradient(0,by,0,by+bh);
+            gr.addColorStop(0, isDark?'rgba(26,188,156,0.95)':'rgba(16,185,129,0.92)');
+            gr.addColorStop(1, isDark?'rgba(11,110,92,0.7)' :'rgba(4,120,87,0.7)');
+            ctx.fillStyle=gr;
+            var rad=Math.min(5,bh/2);
+            ctx.beginPath();
+            ctx.moveTo(bx+rad,by); ctx.lineTo(bx+bw-rad,by);
+            ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+rad);
+            ctx.lineTo(bx+bw,by+bh); ctx.lineTo(bx,by+bh);
+            ctx.lineTo(bx,by+rad); ctx.quadraticCurveTo(bx,by,bx+rad,by);
+            ctx.closePath(); ctx.fill();
+            if(dataCA[bi]>0 && bw>18){
+                ctx.fillStyle=isDark?'rgba(26,188,156,1)':'rgba(4,120,87,1)';
+                ctx.font='bold 10px sans-serif'; ctx.textAlign='center';
+                var vStr=dataCA[bi]>=1000?(dataCA[bi]/1000).toFixed(1)+'k':dataCA[bi].toFixed(0);
+                ctx.fillText(vStr, bx+bw/2, Math.max(by-4, PAD.top+9));
+            }
+            ctx.save();
+            ctx.fillStyle=mutedCol; ctx.font='bold 9px sans-serif'; ctx.textAlign='right';
+            ctx.translate(bx+bw/2, H-PAD.bottom+12);
+            ctx.rotate(n>8?-Math.PI/5:0);
+            ctx.fillText(labCA[bi], 0, 0);
+            ctx.restore();
+        }
+        if(n===0){ ctx.fillStyle=mutedCol; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('Aucune donnée', W/2, H/2); }
+    }
+
+    var cEC = document.getElementById('clot-chart-ecarts');
+    var rec8    = sorted.slice(-8);
+    var labEC   = rec8.map(function(h){ var d=new Date(h.datetime); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); });
+    var caisEC  = rec8.map(function(h){ return (h.caissier||'?').slice(0,5); });
+    var espData = rec8.map(function(h){ return h.ecartEsp!=null?h.ecartEsp:null; });
+    var cbData  = rec8.map(function(h){ return h.ecartCb!=null?h.ecartCb:null; });
+    var totData = rec8.map(function(h){ return (h.ecartEsp!=null||h.ecartCb!=null)?(h.ecartEsp||0)+(h.ecartCb||0):null; });
+
+    var kpiEl = document.getElementById('clot-ec-kpis');
+    if (kpiEl && rec8.length > 0) {
+        var validTots = totData.filter(function(v){return v!==null;});
+        var avgTot  = validTots.length ? validTots.reduce(function(s,v){return s+v;},0)/validTots.length : null;
+        var maxAbs  = validTots.length ? Math.max.apply(null,validTots.map(Math.abs)) : null;
+        var parfait = validTots.filter(function(v){return Math.abs(v)<0.01;}).length;
+        var avgClr  = avgTot===null?'#888':Math.abs(avgTot)<0.5?'#27ae60':avgTot>0?'#f39c12':'#e74c3c';
+        kpiEl.innerHTML = [
+            { ico:'📊', val: avgTot!==null ? (avgTot>=0?'+':'')+avgTot.toFixed(2)+' €' : '—', lbl:'Écart moyen', clr:avgClr },
+            { ico:'⚡', val: maxAbs!==null ? maxAbs.toFixed(2)+' €' : '—', lbl:'Pic max', clr:'#e74c3c' },
+            { ico:'✅', val: parfait+' / '+validTots.length, lbl:'Sessions parfaites', clr:'#27ae60' }
+        ].map(function(k){
+            return '<div style="background:var(--bg-card-2,#f8f9fa);border-radius:8px;padding:7px 8px;text-align:center;">'
+                +'<div style="font-size:0.72rem;font-weight:900;color:'+k.clr+';line-height:1;">'+k.ico+' '+k.val+'</div>'
+                +'<div style="font-size:0.58rem;color:var(--text-muted,#aaa);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;">'+k.lbl+'</div></div>';
+        }).join('');
+    }
+
+    var mode = window._clotEcartsMode || 'divergence';
+
+    if (mode === 'tableau') {
+        var wrap = document.getElementById('clot-ec-chart-wrap');
+        if (wrap) {
+            var rows = rec8.map(function(h,i) {
+                var esp = h.ecartEsp, cb = h.ecartCb;
+                var tot = (esp!=null||cb!=null)?(esp||0)+(cb||0):null;
+                function _fmt(v){ return v===null?'<span style="color:#aaa">—</span>':'<span style="color:'+(Math.abs(v)<0.01?'#27ae60':v>0?'#f39c12':'#e74c3c')+';font-weight:800;">'+(v>=0?'+':'')+v.toFixed(2)+'€</span>'; }
+                return '<tr style="border-bottom:1px solid var(--border-color,#eee);">'
+                    +'<td style="padding:6px 8px;font-size:0.75rem;font-weight:700;color:var(--text-main,#2c3e50);">'+labEC[i]+'</td>'
+                    +'<td style="padding:6px 8px;font-size:0.72rem;color:var(--text-muted,#888);">'+caisEC[i]+'</td>'
+                    +'<td style="padding:6px 8px;text-align:right;font-size:0.75rem;">'+_fmt(esp)+'</td>'
+                    +'<td style="padding:6px 8px;text-align:right;font-size:0.75rem;">'+_fmt(cb)+'</td>'
+                    +'<td style="padding:6px 8px;text-align:right;font-size:0.78rem;border-left:2px solid var(--border-color,#eee);">'+_fmt(tot)+'</td></tr>';
+            }).join('');
+            wrap.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'
+                +'<thead><tr style="background:var(--bg-card-2,#f0f4f8);">'
+                +'<th style="padding:6px 8px;font-size:0.62rem;text-align:left;color:var(--text-muted,#888);text-transform:uppercase;font-weight:800;">Date</th>'
+                +'<th style="padding:6px 8px;font-size:0.62rem;text-align:left;color:var(--text-muted,#888);text-transform:uppercase;font-weight:800;">Caissier</th>'
+                +'<th style="padding:6px 8px;font-size:0.62rem;text-align:right;color:#27ae60;text-transform:uppercase;font-weight:800;">Esp.</th>'
+                +'<th style="padding:6px 8px;font-size:0.62rem;text-align:right;color:#3498db;text-transform:uppercase;font-weight:800;">CB</th>'
+                +'<th style="padding:6px 8px;font-size:0.62rem;text-align:right;color:#9b59b6;text-transform:uppercase;font-weight:800;border-left:2px solid var(--border-color,#eee);">Total</th>'
+                +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+        }
+        return;
+    }
+
+    var wrap2 = document.getElementById('clot-ec-chart-wrap');
+    if (wrap2 && !wrap2.querySelector('canvas')) wrap2.innerHTML = '<canvas id="clot-chart-ecarts" style="width:100%;height:185px;display:block;"></canvas>';
+    cEC = document.getElementById('clot-chart-ecarts');
+    if (!cEC) return;
+
+    cEC.style.width = '100%';
+    var _ecParW = cEC.parentElement ? cEC.parentElement.clientWidth - 28 : 0;
+    var W2 = _ecParW > 80 ? _ecParW : (cEC.offsetWidth || 320);
+    var H2 = (_clotFocused==='ecarts' ? 320 : 220);
+    cEC.style.height = H2+'px';
+    var ctx2 = _setupHiDpiCanvas(cEC, W2, H2);
+    ctx2.clearRect(0,0,W2,H2);
+    var P2={top:18,right:14,bottom:46,left:48};
+    var CW2=W2-P2.left-P2.right, CH2=H2-P2.top-P2.bottom;
+    var n2=rec8.length;
+
+    if (n2===0){ ctx2.fillStyle=mutedCol;ctx2.font='13px sans-serif';ctx2.textAlign='center'; ctx2.fillText('Aucune donnée',W2/2,H2/2); return; }
+
+    var allV=espData.concat(cbData).concat(totData).filter(function(v){return v!==null;});
+    var rawMax=allV.length>0?Math.max.apply(null,allV.map(Math.abs)):0.5;
+    rawMax=Math.max(rawMax,0.5);
+    var mxA=(function(v){var mag=Math.pow(10,Math.floor(Math.log10(v)));var step=mag*0.5;return Math.ceil(v/step)*step;})(rawMax);
+    var zeroY=P2.top+CH2/2;
+
+    [1,0.5,0,-0.5,-1].forEach(function(frac){
+        var gy2=zeroY-frac*(CH2/2);
+        if(frac===0){ctx2.strokeStyle=isDark?'rgba(255,255,255,0.35)':'rgba(0,0,0,0.22)';ctx2.lineWidth=1.5;ctx2.setLineDash([]);}
+        else{ctx2.strokeStyle=gridCol;ctx2.lineWidth=1;ctx2.setLineDash(Math.abs(frac)===0.5?[2,3]:[3,4]);}
+        ctx2.beginPath();ctx2.moveTo(P2.left,gy2);ctx2.lineTo(P2.left+CW2,gy2);ctx2.stroke();
+        ctx2.setLineDash([]);
+        var lv=frac*mxA;
+        ctx2.fillStyle=frac===0?textCol:mutedCol;
+        ctx2.font=frac===0?'bold 11px sans-serif':'10px sans-serif';ctx2.textAlign='right';
+        ctx2.fillText((lv>0?'+':'')+lv.toFixed(Math.abs(lv)<1?2:1),P2.left-5,gy2+4);
+    });
+
+    if (mode==='divergence') {
+        var slotW=CW2/n2,bw2=Math.max(6,slotW*0.23),gap2=Math.max(1.5,bw2*0.16);
+        for(var z2=0;z2<n2;z2++){ if(z2%2===1){ ctx2.fillStyle=isDark?'rgba(255,255,255,0.028)':'rgba(0,0,0,0.025)'; ctx2.fillRect(P2.left+z2*slotW,P2.top,slotW,CH2); } }
+        function drawBar2(x,val,colPos,colNeg,colZero){
+            if(val===null)return;
+            var isZ=Math.abs(val)<0.01,isP=val>=0;
+            var col=isZ?colZero:(isP?colPos:colNeg);
+            var bh=Math.max(3,Math.abs(val/mxA)*(CH2/2));
+            var by=isP?zeroY-bh:zeroY,rad=Math.min(4,bh/2);
+            ctx2.save();
+            ctx2.shadowColor='rgba(0,0,0,0.22)';ctx2.shadowBlur=2.5;ctx2.shadowOffsetY=1.5;
+            ctx2.fillStyle=col;
+            ctx2.beginPath();
+            if(isP){ctx2.moveTo(x+rad,by);ctx2.lineTo(x+bw2-rad,by);ctx2.quadraticCurveTo(x+bw2,by,x+bw2,by+rad);ctx2.lineTo(x+bw2,by+bh);ctx2.lineTo(x,by+bh);ctx2.lineTo(x,by+rad);ctx2.quadraticCurveTo(x,by,x+rad,by);}
+            else{ctx2.moveTo(x,by);ctx2.lineTo(x+bw2,by);ctx2.lineTo(x+bw2,by+bh-rad);ctx2.quadraticCurveTo(x+bw2,by+bh,x+bw2-rad,by+bh);ctx2.lineTo(x+rad,by+bh);ctx2.quadraticCurveTo(x,by+bh,x,by+bh-rad);ctx2.lineTo(x,by);}
+            ctx2.closePath();ctx2.fill();
+            ctx2.restore();
+            if(bw2>9&&Math.abs(val)>=0.01){var vs=(val>=0?'+':'')+val.toFixed(1);ctx2.save();ctx2.font='bold 8.5px sans-serif';ctx2.textAlign='center';ctx2.fillStyle=col;ctx2.fillText(vs,x+bw2/2,isP?Math.max(by-5,P2.top+8):Math.min(by+bh+10,zeroY+CH2/2-1));ctx2.restore();}
+        }
+        for(var i2=0;i2<n2;i2++){
+            var sx=P2.left+i2*slotW+slotW/2,gW=bw2*3+gap2*2,gx=sx-gW/2;
+            drawBar2(gx,espData[i2],'#27ae60','#e74c3c','#27ae60');
+            drawBar2(gx+bw2+gap2,cbData[i2],'#3498db','#e74c3c','#3498db');
+            drawBar2(gx+2*(bw2+gap2),totData[i2],'#9b59b6','#c0392b','#27ae60');
+            ctx2.save();ctx2.fillStyle=textCol;ctx2.font='bold 8.5px sans-serif';ctx2.textAlign='right';
+            ctx2.translate(sx,H2-P2.bottom+9);ctx2.rotate(-Math.PI/5);
+            ctx2.fillText(labEC[i2]+' '+caisEC[i2],0,0);ctx2.restore();
+        }
+    } else if (mode==='ligne') {
+        function drawLine(data,col,fill,labelDy){
+            var pts=data.map(function(v,i){ return v!==null?{x:P2.left+(i+0.5)*(CW2/n2),y:zeroY-(v/mxA)*(CH2/2)}:null; });
+            if(fill){
+                ctx2.beginPath(); var started=false;
+                pts.forEach(function(p){ if(!p)return; if(!started){ctx2.moveTo(p.x,zeroY);ctx2.lineTo(p.x,p.y);started=true;} else ctx2.lineTo(p.x,p.y); });
+                if(started){ctx2.lineTo(pts.filter(Boolean).slice(-1)[0].x,zeroY);ctx2.closePath();}
+                ctx2.fillStyle=col.replace(')',',0.12)').replace('rgb','rgba'); ctx2.fill();
+            }
+            ctx2.beginPath();ctx2.strokeStyle=col;ctx2.lineWidth=2.2;ctx2.lineJoin='round';
+            var first=true;
+            pts.forEach(function(p){ if(!p)return; if(first){ctx2.moveTo(p.x,p.y);first=false;}else ctx2.lineTo(p.x,p.y); });
+            ctx2.stroke();
+            pts.forEach(function(p,i){
+                if(!p)return;
+                var v=data[i];
+                var dotCol=v!==null&&Math.abs(v)<0.01?'#27ae60':(v>0?'#f39c12':'#e74c3c');
+                ctx2.beginPath();ctx2.arc(p.x,p.y,4,0,2*Math.PI);ctx2.fillStyle=dotCol;ctx2.fill();
+                ctx2.strokeStyle='#fff';ctx2.lineWidth=1.5;ctx2.stroke();
+                if(v!==null){
+                    var _txt=(v>=0?'+':'')+v.toFixed(2)+'€';
+                    ctx2.font='bold 9px sans-serif';ctx2.textAlign='center';ctx2.textBaseline='middle';
+                    var _tw=ctx2.measureText(_txt).width;
+                    var _ly=p.y+(labelDy||-12);
+                    _ly=Math.max(P2.top+8,Math.min(H2-P2.bottom-6,_ly));
+                    var _bx=p.x-_tw/2-3,_by=_ly-7,_bw=_tw+6,_bh=13,_br=3;
+                    ctx2.beginPath();
+                    ctx2.moveTo(_bx+_br,_by);
+                    ctx2.arcTo(_bx+_bw,_by,_bx+_bw,_by+_bh,_br);
+                    ctx2.arcTo(_bx+_bw,_by+_bh,_bx,_by+_bh,_br);
+                    ctx2.arcTo(_bx,_by+_bh,_bx,_by,_br);
+                    ctx2.arcTo(_bx,_by,_bx+_bw,_by,_br);
+                    ctx2.closePath();
+                    ctx2.fillStyle=isDark?'rgba(15,17,26,0.82)':'rgba(255,255,255,0.9)'; ctx2.fill();
+                    ctx2.fillStyle=dotCol; ctx2.fillText(_txt,p.x,_ly);
+                    ctx2.textBaseline='alphabetic';
+                }
+            });
+            pts.forEach(function(p,i){
+                if(!p)return;
+                ctx2.save();ctx2.fillStyle=mutedCol;ctx2.font='8px sans-serif';ctx2.textAlign='right';
+                ctx2.translate(p.x,H2-P2.bottom+8);ctx2.rotate(-Math.PI/5);
+                ctx2.fillText(labEC[i]+' '+caisEC[i],0,0);ctx2.restore();
+            });
+        }
+        drawLine(espData,'rgb(39,174,96)',false,-13);
+        drawLine(cbData,'rgb(52,152,219)',false,-26);
+        drawLine(totData,'rgb(155,89,182)',true,16);
+    } else if (mode==='histo') {
+        var slotW3=CW2/n2,bw3=Math.max(10,slotW3*0.6);
+        for(var i3=0;i3<n2;i3++){
+            var v3=totData[i3];
+            if(v3===null)continue;
+            var isP3=v3>=0,isZ3=Math.abs(v3)<0.01;
+            var col3=isZ3?'#27ae60':(Math.abs(v3)<1?(isP3?'#f39c12':'#e67e22'):(isP3?'#e67e22':'#e74c3c'));
+            var bh3=Math.max(3,Math.abs(v3/mxA)*(CH2/2));
+            var bx3=P2.left+i3*slotW3+(slotW3-bw3)/2;
+            var by3=isP3?zeroY-bh3:zeroY,rad3=Math.min(5,bh3/2);
+            ctx2.fillStyle=col3;
+            ctx2.beginPath();
+            if(isP3){ctx2.moveTo(bx3+rad3,by3);ctx2.lineTo(bx3+bw3-rad3,by3);ctx2.quadraticCurveTo(bx3+bw3,by3,bx3+bw3,by3+rad3);ctx2.lineTo(bx3+bw3,by3+bh3);ctx2.lineTo(bx3,by3+bh3);ctx2.lineTo(bx3,by3+rad3);ctx2.quadraticCurveTo(bx3,by3,bx3+rad3,by3);}
+            else{ctx2.moveTo(bx3,by3);ctx2.lineTo(bx3+bw3,by3);ctx2.lineTo(bx3+bw3,by3+bh3-rad3);ctx2.quadraticCurveTo(bx3+bw3,by3+bh3,bx3+bw3-rad3,by3+bh3);ctx2.lineTo(bx3+rad3,by3+bh3);ctx2.quadraticCurveTo(bx3,by3+bh3,bx3,by3+bh3-rad3);ctx2.lineTo(bx3,by3);}
+            ctx2.closePath();ctx2.fill();
+            ctx2.fillStyle=col3;ctx2.font='bold 9px sans-serif';ctx2.textAlign='center';
+            ctx2.fillText((v3>=0?'+':'')+v3.toFixed(2)+'€',bx3+bw3/2,isP3?Math.max(by3-4,P2.top+9):by3+bh3+10);
+            ctx2.save();ctx2.fillStyle=mutedCol;ctx2.font='bold 8.5px sans-serif';ctx2.textAlign='right';
+            ctx2.translate(bx3+bw3/2,H2-P2.bottom+8);ctx2.rotate(-Math.PI/5);
+            ctx2.fillText(labEC[i3]+' '+caisEC[i3],0,0);ctx2.restore();
+        }
+    }
+
+    var validTots2=totData.filter(function(v){return v!==null;});
+    var avgTot2=validTots2.length?validTots2.reduce(function(s,v){return s+v;},0)/validTots2.length:null;
+    if(avgTot2!==null&&mode!=='tableau'){
+        var avgY2=zeroY-(avgTot2/mxA)*(CH2/2);
+        ctx2.save();ctx2.strokeStyle='#8e44ad';ctx2.lineWidth=1.5;ctx2.setLineDash([5,3]);
+        ctx2.beginPath();ctx2.moveTo(P2.left,avgY2);ctx2.lineTo(P2.left+CW2,avgY2);ctx2.stroke();
+        ctx2.setLineDash([]);ctx2.fillStyle='#8e44ad';ctx2.font='bold 9px sans-serif';ctx2.textAlign='right';
+        ctx2.fillText('moy '+(avgTot2>=0?'+':'')+avgTot2.toFixed(2)+'€',P2.left+CW2,avgY2-3);
+        ctx2.restore();
+    }
+    if(mode!=='histo'){
+        var legX2=P2.left,legY2=H2-8;
+        [{col:'#27ae60',lbl:'Esp.'},{col:'#3498db',lbl:'CB'},{col:'#9b59b6',lbl:'Total'}].forEach(function(li){
+            ctx2.fillStyle=li.col;ctx2.fillRect(legX2,legY2-8,8,8);
+            ctx2.fillStyle=textCol;ctx2.font='bold 9px sans-serif';ctx2.textAlign='left';
+            ctx2.fillText(li.lbl,legX2+10,legY2-1);legX2+=10+ctx2.measureText(li.lbl).width+10;
+        });
+    }
+}
+
+// ── Filtres / raccourcis période ─────────────────────────────────────────
+window._clotPeriodChange = function() {
+    var period = document.getElementById('cloture-filter-period').value;
+    var rangeEl = document.getElementById('cloture-date-range');
+    if (rangeEl) rangeEl.style.display = period === 'custom' ? '' : 'none';
+    renderCloturesTab();
+};
+window._clotSetToday = function() {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('cloture-date-from').value = today;
+    document.getElementById('cloture-date-to').value = today;
+    renderCloturesTab();
+};
+window._clotSetWeek = function() {
+    var now = new Date();
+    var day = now.getDay();
+    var mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+    document.getElementById('cloture-date-from').value = mon.toISOString().split('T')[0];
+    document.getElementById('cloture-date-to').value = now.toISOString().split('T')[0];
+    renderCloturesTab();
+};
+window._clotSetMonth = function() {
+    var now = new Date();
+    var first = new Date(now.getFullYear(), now.getMonth(), 1);
+    document.getElementById('cloture-date-from').value = first.toISOString().split('T')[0];
+    document.getElementById('cloture-date-to').value = now.toISOString().split('T')[0];
+    renderCloturesTab();
+};
+
+// ── CSV export ────────────────────────────────────────────────────────────
+function exportCloturesCSV() {
+    var hist = _loadCaisseHistorique();
+    if (!hist.length) { showScanToast('⚠️ Aucune clôture à exporter', 'info'); return; }
+    var headers = ['Date','Heure','Caissier','Type','PrisePoste','FondCaisse','NbVentes','NbRetours','CA_Total','Theor_Especes','Recu_Especes','Ecart_Especes','Theor_CB','Recu_CB','Ecart_CB','Note'];
+    var rows = hist.map(function(h) {
+        var d = new Date(h.datetime);
+        return [
+            h.date || '', d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),
+            '"' + (h.caissier || '').replace(/"/g,'""') + '"',
+            h.partiel ? 'Partielle' : 'Finale', h.prisePoste || '',
+            h.fondCaisse != null ? h.fondCaisse.toFixed(2) : '0.00',
+            h.nbVentes || 0, h.nbRetours || 0, (h.totalJour || 0).toFixed(2), (h.theorEsp || 0).toFixed(2),
+            h.recuEsp != null ? h.recuEsp.toFixed(2) : '', h.ecartEsp != null ? h.ecartEsp.toFixed(2) : '',
+            (h.theorCb || 0).toFixed(2), h.recuCb != null ? h.recuCb.toFixed(2) : '', h.ecartCb != null ? h.ecartCb.toFixed(2) : '',
+            '"' + (h.note || '').replace(/"/g,'""') + '"'
+        ].join(';');
+    });
+    var csv = '﻿' + headers.join(';') + '\n' + rows.join('\n');
+    var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'clotures_poste_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click(); URL.revokeObjectURL(url);
+    showScanToast('✅ ' + hist.length + ' clôture(s) exportée(s)', 'success');
+}
+
+// ── Suppression / modification (admin uniquement) ───────────────────────
+window._clotDelete = function(id) {
+    if (!cpIsAdmin()) { showScanToast('⛔ Accès réservé aux administrateurs', 'error'); return; }
+    if (!confirm('Supprimer cette clôture de poste ?\nCette action est irréversible.')) return;
+    var hist = _loadCaisseHistorique();
+    hist = hist.filter(function(h) { return h.id !== id; });
+    _saveCaisseHistorique(hist);
+    renderCloturesTab();
+    showScanToast('🗑️ Clôture supprimée', 'success');
+};
+
+window._clotEditId = null;
+window._clotOpenEdit = function(id) {
+    if (!cpIsAdmin()) { showScanToast('⛔ Accès réservé aux administrateurs', 'error'); return; }
+    var hist = _loadCaisseHistorique();
+    var entry = hist.find(function(h) { return h.id === id; });
+    if (!entry) return;
+    window._clotEditId = id;
+    document.getElementById('clot-edit-date').value       = entry.date || '';
+    document.getElementById('clot-edit-caissier').value    = entry.caissier || '';
+    document.getElementById('clot-edit-type').value        = entry.partiel ? 'partiel' : 'final';
+    document.getElementById('clot-edit-prise').value       = entry.prisePoste || '';
+    document.getElementById('clot-edit-fond').value        = entry.fondCaisse || '';
+    document.getElementById('clot-edit-nb-ventes').value   = entry.nbVentes || 0;
+    document.getElementById('clot-edit-nb-retours').value  = entry.nbRetours || 0;
+    document.getElementById('clot-edit-total').value       = entry.totalJour != null ? entry.totalJour.toFixed(2) : '';
+    document.getElementById('clot-edit-theor-esp').value   = entry.theorEsp != null ? entry.theorEsp.toFixed(2) : '';
+    document.getElementById('clot-edit-recu-esp').value    = entry.recuEsp != null ? entry.recuEsp.toFixed(2) : '';
+    document.getElementById('clot-edit-theor-cb').value    = entry.theorCb != null ? entry.theorCb.toFixed(2) : '';
+    document.getElementById('clot-edit-recu-cb').value     = entry.recuCb != null ? entry.recuCb.toFixed(2) : '';
+    document.getElementById('clot-edit-note').value        = entry.note || '';
+    var d = new Date(entry.datetime);
+    document.getElementById('clot-edit-title-date').textContent = d.toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric'}) + ' ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('clot-edit-modal').style.display = 'flex';
+};
+
+window._clotSaveEdit = function() {
+    var id = window._clotEditId;
+    if (!id) return;
+    var hist = _loadCaisseHistorique();
+    var idx = hist.findIndex(function(h) { return h.id === id; });
+    if (idx < 0) { showScanToast('❌ Clôture introuvable', 'error'); return; }
+
+    var date      = document.getElementById('clot-edit-date').value.trim();
+    var caissier  = document.getElementById('clot-edit-caissier').value.trim();
+    var type      = document.getElementById('clot-edit-type').value;
+    var prise     = document.getElementById('clot-edit-prise').value.trim();
+    var fond      = parseFloat(document.getElementById('clot-edit-fond').value) || 0;
+    var nbVentes  = parseInt(document.getElementById('clot-edit-nb-ventes').value) || 0;
+    var nbRetours = parseInt(document.getElementById('clot-edit-nb-retours').value) || 0;
+    var totalJour = parseFloat(document.getElementById('clot-edit-total').value) || 0;
+    var theorEsp  = parseFloat(document.getElementById('clot-edit-theor-esp').value) || 0;
+    var recuEsp   = document.getElementById('clot-edit-recu-esp').value.trim();
+    var theorCb   = parseFloat(document.getElementById('clot-edit-theor-cb').value) || 0;
+    var recuCb    = document.getElementById('clot-edit-recu-cb').value.trim();
+    var note      = document.getElementById('clot-edit-note').value.trim();
+
+    var recuEspF = recuEsp !== '' ? parseFloat(recuEsp) : null;
+    var recuCbF  = recuCb  !== '' ? parseFloat(recuCb)  : null;
+    var ecartEsp = recuEspF !== null ? parseFloat((recuEspF - theorEsp).toFixed(2)) : null;
+    var ecartCb  = recuCbF  !== null ? parseFloat((recuCbF  - theorCb).toFixed(2)) : null;
+
+    hist[idx].date       = date || hist[idx].date;
+    hist[idx].caissier   = caissier || hist[idx].caissier;
+    hist[idx].partiel    = type === 'partiel';
+    hist[idx].prisePoste = prise || null;
+    hist[idx].fondCaisse = fond;
+    hist[idx].nbVentes   = nbVentes;
+    hist[idx].nbRetours  = nbRetours;
+    hist[idx].totalJour  = totalJour;
+    hist[idx].theorEsp   = theorEsp;
+    hist[idx].theorCb    = theorCb;
+    hist[idx].recuEsp    = recuEspF;
+    hist[idx].recuCb     = recuCbF;
+    hist[idx].ecartEsp   = ecartEsp;
+    hist[idx].ecartCb    = ecartCb;
+    hist[idx].note       = note || null;
+
+    _saveCaisseHistorique(hist);
+    document.getElementById('clot-edit-modal').style.display = 'none';
+    renderCloturesTab();
+    showScanToast('✅ Clôture modifiée', 'success');
+};
+
+// ── Détail ────────────────────────────────────────────────────────────────
+window._clotDetailId = null;
+window._clotShowDetail = function(id) {
+    var hist = _loadCaisseHistorique();
+    var h = hist.find(function(e) { return e.id === id; });
+    if (!h) return;
+    window._clotDetailId = id;
+    var modal = document.getElementById('clot-detail-modal');
+    if (!modal) return;
+    var headerEl = document.getElementById('clot-detail-header');
+    if (headerEl) headerEl.style.background = h.partiel ? 'linear-gradient(135deg,#7f8c8d,#95a5a6)' : 'linear-gradient(135deg,#1a5276,#2980b9)';
+    var sub = document.getElementById('clot-detail-subtitle');
+    if (sub) {
+        var dt = h.datetime ? new Date(h.datetime).toLocaleString('fr-FR') : (h.date || '');
+        sub.textContent = dt + (h.partiel ? ' — Clôture intermédiaire' : ' — Clôture finale') + (h.caissier ? ' · ' + h.caissier : '');
+    }
+    var kpiEl = document.getElementById('clot-detail-kpis');
+    if (kpiEl) {
+        function kpiCard(icon, label, val, color) {
+            return '<div style="background:' + (color||'rgba(52,152,219,0.07)') + ';border-radius:10px;padding:10px 12px;text-align:center;">'
+                 + '<div style="font-size:1.15rem;">' + icon + '</div>'
+                 + '<div style="font-size:0.72rem;font-weight:700;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;">' + label + '</div>'
+                 + '<div style="font-size:1rem;font-weight:900;color:var(--text-main,#2c3e50);margin-top:4px;">' + val + '</div></div>';
+        }
+        var total = h.totalJour != null ? h.totalJour.toFixed(2) + ' €' : '—';
+        var nb    = h.nbVentes   != null ? String(h.nbVentes) : '—';
+        var retours = h.nbRetours != null ? String(h.nbRetours) : '0';
+        var type  = h.partiel ? '⏸️ Intermédiaire' : '🏁 Finale';
+        kpiEl.innerHTML = kpiCard('💰','CA du jour',total,'rgba(39,174,96,0.08)') + kpiCard('🛒','Ventes',nb,'rgba(52,152,219,0.08)') + kpiCard('↩️','Retours',retours,'rgba(231,76,60,0.07)') + kpiCard('🏷️','Type',type,'rgba(127,140,141,0.07)');
+    }
+    var caisseEl = document.getElementById('clot-detail-caisse');
+    if (caisseEl) {
+        function row(label, val, color) {
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-color,#f0f0f0);">'
+                 + '<span style="color:var(--text-muted,#888);font-size:0.8rem;">' + label + '</span>'
+                 + '<span style="font-weight:700;color:' + (color||'var(--text-main,#2c3e50)') + ';">' + val + '</span></div>';
+        }
+        var fmt = function(v) { return v != null ? v.toFixed(2) + ' €' : '—'; };
+        var ecEspColor = h.ecartEsp == null ? '#888' : Math.abs(h.ecartEsp) < 0.02 ? '#27ae60' : h.ecartEsp > 0 ? '#f39c12' : '#e74c3c';
+        var ecCbColor  = h.ecartCb  == null ? '#888' : Math.abs(h.ecartCb)  < 0.02 ? '#27ae60' : h.ecartCb  > 0 ? '#f39c12' : '#e74c3c';
+        var ecEspSign = h.ecartEsp != null && h.ecartEsp >= 0 ? '+' : '';
+        var ecCbSign  = h.ecartCb  != null && h.ecartCb  >= 0 ? '+' : '';
+        var html = '';
+        html += row('Théorique espèces', fmt(h.theorEsp));
+        html += row('Reçu espèces', fmt(h.recuEsp));
+        html += row('Écart espèces', h.ecartEsp != null ? ecEspSign + h.ecartEsp.toFixed(2) + ' €' : '—', ecEspColor);
+        html += row('Théorique CB', fmt(h.theorCb));
+        html += row('Reçu CB', fmt(h.recuCb));
+        html += row('Écart CB', h.ecartCb != null ? ecCbSign + h.ecartCb.toFixed(2) + ' €' : '—', ecCbColor);
+        if (h.fondCaisse) html += row('Fond de caisse', fmt(h.fondCaisse));
+        if (h.prisePoste) html += row('Prise de poste', h.prisePoste);
+        caisseEl.innerHTML = html;
+    }
+    var noteWrap = document.getElementById('clot-detail-note-wrap');
+    var noteEl   = document.getElementById('clot-detail-note');
+    if (noteWrap && noteEl) {
+        if (h.note) { noteEl.textContent = h.note; noteWrap.style.display = ''; }
+        else noteWrap.style.display = 'none';
+    }
+    var editBtn = document.getElementById('clot-detail-edit-btn');
+    if (editBtn) editBtn.style.display = cpIsAdmin() ? '' : 'none';
+    modal.style.display = 'flex';
+};
+
+// ── Impression ticket ───────────────────────────────────────────────────
+window._clotPrintOpts = (function(){ try{return JSON.parse(localStorage.getItem('covo_print_opts')||'{}');}catch(e){return {};} })();
+function _clotSavePrintOpts(){ localStorage.setItem('covo_print_opts', JSON.stringify(window._clotPrintOpts)); }
+
+window._clotBuildTicketHTML = function(h, opts) {
+    opts = opts || {};
+    var bw = opts.color === 'bw';
+    var font = opts.font || '"Courier New",Courier,monospace';
+    var sizeKey = opts.size || 'normal';
+    var weightKey = opts.weight || 'bold';
+    var fmtKey = opts.format || '80mm';
+    var fmt80 = (fmtKey === '80mm'), fmt57 = (fmtKey === '57mm'), fmtA4 = (fmtKey === 'a4');
+    var fmtCustom = null;
+    if(!fmt80 && !fmt57 && !fmtA4){
+        try{ var _cfmts=JSON.parse(localStorage.getItem('covo_print_formats')||'[]'); fmtCustom=_cfmts.find(function(f){return f.id===fmtKey;})||null; }catch(e){}
+    }
+    var sBase = sizeKey==='small'?'0.72rem':sizeKey==='large'?'0.95rem':'0.82rem';
+    var sSml  = sizeKey==='small'?'0.6rem' :sizeKey==='large'?'0.78rem':'0.68rem';
+    var sBig  = sizeKey==='small'?'0.88rem':sizeKey==='large'?'1.1rem' :'0.98rem';
+    var wBody = weightKey==='normal'?'400':weightKey==='extrabold'?'900':'700';
+    var wStr  = weightKey==='normal'?'600':'900';
+    var shopName=(appSettings&&appSettings.shopName)?appSettings.shopName:'Ma Boutique';
+    var dt=h.datetime?new Date(h.datetime):new Date();
+    var dtStr=dt.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    var timeStr=dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    var typeLabel=h.partiel?'CLOTURE INTERMEDIAIRE':'CLOTURE DE POSTE';
+    var typeBg=bw?'#111':(h.partiel?'#d97706':'#16a34a');
+    function col(v){return bw?'#111':v;}
+    function colm(v){return bw?'#444':v;}
+    function fmt(v){return v!=null?v.toFixed(2)+' €':'—';}
+    function ecSign(v){return v!=null?(v>=0?'+':'')+v.toFixed(2)+' €':'—';}
+    function ecCol(v){if(bw)return'#111';return v==null?'#888':Math.abs(v)<0.02?'#16a34a':v>0?'#d97706':'#dc2626';}
+    var totalRecu=(h.recuEsp!=null?h.recuEsp:0)+(h.recuCb!=null?h.recuCb:0);
+    var totalTheor=(h.theorEsp!=null?h.theorEsp:0)+(h.theorCb!=null?h.theorCb:0);
+    var ecTot=(h.ecartEsp!=null?h.ecartEsp:0)+(h.ecartCb!=null?h.ecartCb:0);
+    var hasRecu=h.recuEsp!=null||h.recuCb!=null;
+    var dureeStr='';
+    if(h.prisePoste){
+        var pp=h.prisePoste.split(':');
+        if(pp.length>=2){
+            var pd=new Date(dt);
+            pd.setHours(parseInt(pp[0],10),parseInt(pp[1],10),0,0);
+            if(pd>dt)pd.setDate(pd.getDate()-1);
+            var dm2=Math.round((dt-pd)/60000);
+            if(dm2>0&&dm2<1440){var dh2=Math.floor(dm2/60),dr2=dm2%60;dureeStr=dh2>0?dh2+'h'+(dr2>0?String(dr2).padStart(2,'0'):''):dr2+'min';}
+        }
+    }
+    function row(lbl,val,rcol,xtra){
+        return '<tr><td style="padding:2px 0;font-size:'+sBase+';color:#555;white-space:nowrap;font-weight:'+wBody+';">'+lbl+'</td>'
+          +'<td style="padding:2px 0 2px 10px;font-size:'+sBase+';font-weight:'+wStr+';text-align:right;color:'+(rcol||'#111')+';white-space:nowrap;'+(xtra||'')+'">'+val+'</td></tr>';
+    }
+    function sep(){return '<tr><td colspan="2" style="padding:4px 0;"><div style="border-top:1px dashed #bbb;"></div></td></tr>';}
+    function sec(lbl){return '<tr><td colspan="2" style="padding:5px 0 2px;font-size:'+sSml+';font-weight:900;color:#888;text-transform:uppercase;letter-spacing:0.07em;">'+lbl+'</td></tr>';}
+    var rows='';
+    rows+=sec('Identification');
+    rows+=row('Caissier',h.caissier||'Inconnu');
+    rows+=row('Type',h.partiel?'Intermédiaire':'Finale',col(h.partiel?'#d97706':'#16a34a'));
+    rows+=row('Référence',(h.id||'—').slice(-12),colm('#888'));
+    if(h.prisePoste)rows+=row('Début poste',h.prisePoste+(dureeStr?' ('+dureeStr+')':''));
+    rows+=sep();
+    rows+=sec('Activité');
+    rows+=row('CA du jour',fmt(h.totalJour),col('#7c3aed'));
+    rows+=row('Nb ventes',h.nbVentes!=null?String(h.nbVentes):'—');
+    if(h.nbRetours)rows+=row('Retours',String(h.nbRetours),col('#dc2626'));
+    rows+=sep();
+    rows+=sec('Espèces');
+    rows+=row('Théorique',fmt(h.theorEsp));
+    rows+=row('Reçu',h.recuEsp!=null?fmt(h.recuEsp):'Non compté',h.recuEsp!=null?'#111':colm('#aaa'));
+    rows+=row('Écart',ecSign(h.ecartEsp),ecCol(h.ecartEsp));
+    rows+=sep();
+    rows+=sec('Carte bancaire');
+    rows+=row('Théorique',fmt(h.theorCb));
+    rows+=row('Reçu',h.recuCb!=null?fmt(h.recuCb):'Non compté',h.recuCb!=null?'#111':colm('#aaa'));
+    rows+=row('Écart',ecSign(h.ecartCb),ecCol(h.ecartCb));
+    if(hasRecu){ rows+=sep();rows+=sec('Récapitulatif'); rows+=row('Total théorique',fmt(totalTheor)); rows+=row('Total reçu',fmt(totalRecu),col('#1a5276')); rows+=row('Écart total',ecSign(ecTot),ecCol(ecTot)); }
+    if(h.fondCaisse){rows+=sep();rows+=row('Fond de caisse',fmt(h.fondCaisse));}
+    if(h.note){ rows+=sep();rows+=sec('Note'); rows+='<tr><td colspan="2" style="padding:3px 0;font-size:'+sBase+';color:#444;font-style:italic;white-space:pre-wrap;font-weight:'+wBody+';">'+h.note.replace(/</g,'&lt;')+'</td></tr>'; }
+    var now=new Date();
+    var pageW, bodyW;
+    if(fmt57){pageW='57mm';bodyW='50mm';}
+    else if(fmt80){pageW='80mm';bodyW='76mm';}
+    else if(fmtA4){pageW='210mm';bodyW='180mm';}
+    else if(fmtCustom){pageW=fmtCustom.w+'mm';bodyW=(fmtCustom.w-8)+'mm';}
+    else{pageW='80mm';bodyW='76mm';}
+    var bwCss=bw?'* { color: inherit !important; } .type-badge { color: white !important; }':'';
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket clôture<\/title>'
+      +'<style>* { box-sizing:border-box; margin:0; padding:0; } @page { size: '+pageW+' auto; margin:4mm; }'
+      +'body { font-family:'+font+'; background:white; width:'+bodyW+'; padding:0; font-size:'+sBase+'; }'
+      +'.header { text-align:center; padding:8px 0 6px; border-bottom:2px solid #111; margin-bottom:8px; }'
+      +'.shop-name { font-size:'+sBig+'; font-weight:900; letter-spacing:1px; text-transform:uppercase; }'
+      +'.type-badge { display:inline-block; margin:5px 0 4px; padding:3px 12px; font-size:'+sSml+'; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; background:'+typeBg+'; color:white; border-radius:4px; }'
+      +'.datetime { font-size:'+sBase+'; color:#555; margin-top:2px; font-weight:'+wBody+'; }'
+      +'.datetime.bold { font-weight:900; font-size:'+sBig+'; color:#000; }'
+      +'table { width:100%; border-collapse:collapse; }'
+      +'.footer { text-align:center; padding:8px 0 4px; border-top:2px solid #111; margin-top:8px; font-size:'+sSml+'; color:#888; }'
+      +bwCss
+      +'@media screen { body { max-width:'+bodyW+'; margin:10px auto; padding:10px; box-shadow:0 2px 12px rgba(0,0,0,0.12); border:1px solid #ddd; } }'
+      +'@media print { body { width:'+bodyW+'; box-shadow:none; border:none; } }'
+      +'<\/style><\/head><body>'
+      +'<div class="header"><div class="shop-name">'+shopName.replace(/</g,'&lt;')+'<\/div>'
+      +'<div class="type-badge">'+typeLabel+'<\/div>'
+      +'<div class="datetime">'+dtStr+'<\/div>'
+      +'<div class="datetime bold">'+timeStr+'<\/div><\/div>'
+      +'<table>'+rows+'<\/table>'
+      +'<div class="footer">Imprimé le '+now.toLocaleDateString('fr-FR')+' à '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'<\/div>'
+      +'<\/body><\/html>';
+};
+
+window._clotPrintTicket = function(id) {
+    if(!id) return;
+    var hist = _loadCaisseHistorique();
+    var h = hist.find(function(e){ return e.id===id; });
+    if(!h) { showScanToast('❌ Clôture introuvable','error'); return; }
+    window._clotPrintH = h;
+    var modal = document.getElementById('clot-print-cfg-modal');
+    if(!modal) { _clotDoPrint(); return; }
+    modal.style.display = 'flex';
+    try { _clotPrintCfgSetUI(window._clotPrintOpts || {}); } catch(e) { console.warn('SetUI:', e); }
+    setTimeout(function() { try { _clotPrintCfgUpdatePreview(); } catch(e) { console.warn('Preview:', e); } }, 80);
+};
+
+window._clotPrintCfgSetUI = function(opts) {
+    ['btn-print-col','btn-print-bw','btn-print-sm','btn-print-nm','btn-print-lg','btn-print-w1','btn-print-w2','btn-print-w3','btn-print-80','btn-print-57','btn-print-a4'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el){el.style.background='#f4f4f4';el.style.color='#111';el.style.borderColor='#ccc';}
+    });
+    document.querySelectorAll('.btn-custom-fmt').forEach(function(el){ el.style.background='#f4f4f4';el.style.color='#111';el.style.borderColor='#ccc'; });
+    function hi(id){var el=document.getElementById(id);if(el){el.style.background='#111';el.style.color='#fff';el.style.borderColor='#111';}}
+    hi(opts.color==='bw'?'btn-print-bw':'btn-print-col');
+    var sm={small:'btn-print-sm',normal:'btn-print-nm',large:'btn-print-lg'};
+    hi(sm[opts.size||'normal']||'btn-print-nm');
+    var wm={normal:'btn-print-w1',bold:'btn-print-w2',extrabold:'btn-print-w3'};
+    hi(wm[opts.weight||'bold']||'btn-print-w2');
+    var curFmt=opts.format||'80mm';
+    if(curFmt==='a4')hi('btn-print-a4');
+    else if(curFmt==='57mm')hi('btn-print-57');
+    else if(curFmt==='80mm')hi('btn-print-80');
+    else{ var cBtn=document.querySelector('.btn-custom-fmt[data-fid="'+curFmt+'"]'); if(cBtn){cBtn.style.background='#111';cBtn.style.color='#fff';cBtn.style.borderColor='#111';} }
+    var fSel=document.getElementById('sel-print-font');
+    if(fSel)fSel.value=opts.font||'"Courier New",Courier,monospace';
+    _clotRenderCustomFormats();
+};
+
+window._clotPrintCfgSet = function(key,val) {
+    window._clotPrintOpts[key]=val;
+    _clotSavePrintOpts();
+    _clotPrintCfgSetUI(window._clotPrintOpts);
+    _clotPrintCfgUpdatePreview();
+};
+
+window._clotPrintCfgUpdatePreview = function() {
+    var h = window._clotPrintH;
+    if(!h) return;
+    var html;
+    try { html = window._clotBuildTicketHTML(h, window._clotPrintOpts || {}); }
+    catch(e) { console.error('buildTicketHTML:', e); return; }
+    var iframe = document.getElementById('clot-print-preview');
+    if(!iframe) return;
+    iframe.srcdoc = html;
+};
+
+function _clotGetCustomFormats(){ try{return JSON.parse(localStorage.getItem('covo_print_formats')||'[]');}catch(e){return[];} }
+function _clotSaveCustomFormats(arr){ localStorage.setItem('covo_print_formats',JSON.stringify(arr)); }
+
+window._clotRenderCustomFormats = function(){
+    var container=document.getElementById('custom-format-list');
+    if(!container)return;
+    var fmts=_clotGetCustomFormats();
+    if(!fmts.length){container.innerHTML='';return;}
+    var html='';
+    var curFmt=(window._clotPrintOpts||{}).format||'80mm';
+    fmts.forEach(function(f){
+        var active=curFmt===f.id;
+        var bg=active?'#111':'#f4f4f4';
+        var col=active?'#fff':'#111';
+        html+='<div style="display:flex;align-items:center;gap:2px;">';
+        html+='<button class="btn-custom-fmt" data-fid="'+f.id+'"';
+        html+=' onclick="_clotPrintCfgSet(\'format\',\'' + f.id + '\')"';
+        html+=' style="padding:5px 6px;border:1.5px solid #ccc;border-radius:7px;cursor:pointer;font-size:0.72rem;font-weight:700;background:'+bg+';color:'+col+';">';
+        html+=f.label+'<\/button>';
+        html+='<button onclick="_clotDeleteCustomFormat(\''+f.id+'\')"';
+        html+=' style="padding:3px 5px;background:#fee2e2;border:1px solid #fca5a5;border-radius:5px;cursor:pointer;font-size:0.7rem;color:#dc2626;font-weight:800;">✕<\/button>';
+        html+='<\/div>';
+    });
+    container.innerHTML=html;
+};
+
+window._clotAddCustomFormat = function(){
+    var wEl=document.getElementById('fmt-w-input');
+    var hEl=document.getElementById('fmt-h-input');
+    if(!wEl)return;
+    var w=parseInt(wEl.value,10);
+    var h=hEl?parseInt(hEl.value,10):0;
+    if(!w||w<20||w>400){wEl.style.borderColor='#dc2626';setTimeout(function(){wEl.style.borderColor='#ccc';},1200);return;}
+    var fmts=_clotGetCustomFormats();
+    var id='cfmt_'+Date.now();
+    var label=w+'mm'+(h&&h>=10?(' × '+h+'mm'):'');
+    fmts.push({id:id,label:label,w:w,h:h||0});
+    _clotSaveCustomFormats(fmts);
+    wEl.value='';if(hEl)hEl.value='';
+    _clotPrintCfgSet('format',id);
+};
+
+window._clotDeleteCustomFormat = function(id){
+    var fmts=_clotGetCustomFormats().filter(function(f){return f.id!==id;});
+    _clotSaveCustomFormats(fmts);
+    var cur=(window._clotPrintOpts||{}).format;
+    if(cur===id)_clotPrintCfgSet('format','80mm');
+    else _clotRenderCustomFormats();
+};
+
+window._clotDoPrint = function() {
+    var h = window._clotPrintH;
+    if(!h) return;
+    var tHTML;
+    try { tHTML = window._clotBuildTicketHTML(h, window._clotPrintOpts || {}); }
+    catch(e) { console.error('buildTicketHTML:', e); return; }
+    var cfgModal = document.getElementById('clot-print-cfg-modal');
+    if(cfgModal) cfgModal.style.display = 'none';
+    var old = document.getElementById('_clot_pframe_overlay');
+    if(old) old.remove();
+    var overlay = document.createElement('div');
+    overlay.id = '_clot_pframe_overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#e8e8e8;display:flex;flex-direction:column;';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;background:#111;color:#fff;flex-shrink:0;font-family:Arial,sans-serif;';
+    bar.innerHTML = '<span style="font-weight:900;font-size:0.95rem;flex:1;">🖨️ Aperçu du ticket</span>'
+        + '<button id="_clot_do_print_btn" style="padding:9px 24px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-weight:800;font-size:0.9rem;cursor:pointer;">🖨️ Imprimer</button>'
+        + '<button id="_clot_close_prev_btn" style="padding:9px 16px;background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:8px;font-weight:700;cursor:pointer;">✕ Fermer</button>';
+    overlay.appendChild(bar);
+    var center = document.createElement('div');
+    center.style.cssText = 'flex:1;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
+    var iframe = document.createElement('iframe');
+    iframe.style.cssText = 'width:340px;min-height:500px;border:none;background:white;box-shadow:0 4px 24px rgba(0,0,0,0.2);border-radius:4px;';
+    center.appendChild(iframe);
+    overlay.appendChild(center);
+    document.body.appendChild(overlay);
+    iframe.srcdoc = tHTML;
+    document.getElementById('_clot_do_print_btn').addEventListener('click', function() {
+        var printHTML = tHTML.replace('<\/body><\/html>', '<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},350);}<\/sc'+'ript><\/body><\/html>');
+        var blob = new Blob([printHTML], {type: 'text/html'});
+        var url  = URL.createObjectURL(blob);
+        var win  = window.open(url, '_blank');
+        if(!win) { iframe.focus(); try { iframe.contentWindow.print(); } catch(e) {} }
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    });
+    document.getElementById('_clot_close_prev_btn').addEventListener('click', function() { overlay.remove(); });
+};
+
+/* =====================================================================
+   MODULE GOOGLE DRIVE (simplifié) — partage la même sauvegarde que
+   COVO Pro : mêmes clés localStorage (gdrive_client_id, gdrive_folder_id,
+   gdrive_folder_name) et même convention de fichier covo_backup_*.json.
+   Ne réplique pas les fonctions avancées de COVO Pro (comparaison de
+   sauvegardes, rotation automatique, bannières de mise à jour...) —
+   celles-ci restent disponibles depuis COVO Pro lui-même.
+   ===================================================================== */
+var GD_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+var _cpTokenClient = null, _cpAccessToken = null, _cpConnected = false, _cpFolderId = null;
+
+function _cpLoadGIS() {
+    return new Promise(function(resolve, reject) {
+        if (window.google && window.google.accounts) { resolve(); return; }
+        var s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true; s.defer = true;
+        s.onload = function(){ resolve(); };
+        s.onerror = function(){ reject(new Error('Impossible de charger Google Identity Services')); };
+        document.head.appendChild(s);
+    });
+}
+
+function cpSetDriveStatus(connected, label) {
+    var pill = document.getElementById('cp-drive-pill');
+    var status = document.getElementById('cp-drive-status');
+    if (pill) { pill.className = connected ? 'connected' : ''; pill.textContent = connected ? '☁️ Drive connecté' : '☁️ Google Drive'; }
+    if (status) status.textContent = label || (connected ? 'Connecté' : 'Non connecté');
+}
+
+function cpToggleDrivePanel() {
+    var p = document.getElementById('cp-drive-panel');
+    p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+window.cpDriveConnect = async function() {
+    var input = document.getElementById('cp-gdrive-client-id');
+    var clientId = (input && input.value.trim()) || localStorage.getItem('gdrive_client_id') || '';
+    if (!clientId) { showScanToast('⚠️ Entrez le Client ID Google (identique à celui utilisé dans COVO Pro)', 'info'); return; }
+    localStorage.setItem('gdrive_client_id', clientId);
+    try {
+        cpSetDriveStatus(false, 'Connexion…');
+        await _cpLoadGIS();
+        _cpTokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: GD_SCOPE,
+            login_hint: localStorage.getItem('gdrive_hint_email') || '',
+            callback: async function(resp) {
+                if (resp.error) { cpSetDriveStatus(false, 'Erreur d\'authentification'); showScanToast('❌ Erreur de connexion Google Drive', 'error'); return; }
+                _cpAccessToken = resp.access_token;
+                _cpConnected = true;
+                _cpFolderId = localStorage.getItem('gdrive_folder_id') || null;
+                cpSetDriveStatus(true, _cpFolderId ? 'Connecté — dossier partagé avec COVO Pro' : 'Connecté — aucun dossier configuré, connectez COVO Pro une première fois');
+                showScanToast('✅ Google Drive connecté', 'success');
+            }
+        });
+        _cpTokenClient.requestAccessToken({ prompt: '' });
+    } catch(err) {
+        console.error(err);
+        cpSetDriveStatus(false, 'Erreur');
+        showScanToast('❌ ' + err.message, 'error');
+    }
+};
+
+async function _cpFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + _cpAccessToken });
+    return fetch(url, opts);
+}
+
+function cpDriveMarkDirty() {
+    // Auto-save débouncé : écrit une nouvelle sauvegarde Drive 4s après la dernière modification.
+    if (!_cpConnected) return;
+    clearTimeout(window._cpAutoSaveTimer);
+    window._cpAutoSaveTimer = setTimeout(function(){ cpDriveBackupNow(true); }, 4000);
+}
+
+function _cpBuildFullBackupPayload() {
+    function J(k,d){ try{ var v=localStorage.getItem(k); return v!=null?JSON.parse(v):d; }catch(e){return d;} }
+    function S(k){ return localStorage.getItem(k); }
+    return {
+        products: J('covo_products', []),
+        categories: J('covo_categories', []),
+        promoTypes: J('covo_promos', []),
+        users: J('covo_users', []),
+        salesHistory: J('covo_sales_history', []),
+        appSettings: J('covo_settings', {}),
+        nightTariffSettings: J('covo_night_tariff', {}),
+        cashierPermissions: J('covo_cashier_permissions', {}),
+        pendingSync: J('covo_pending_sync', []),
+        deliveryGoal: parseFloat(localStorage.getItem('covo_delivery_goal')||'0')||0,
+        covo_dark_mode: S('covo_dark_mode'),
+        covo_retours: J('covo_retours', []),
+        covo_marchandise: J('covo_marchandise', []),
+        covo_echeances: J('covo_echeances', []),
+        covo_rhist: J('covo_rhist', []),
+        covo_hist: J('covo_hist', []),
+        covo_sales: J('covo_sales', []),
+        covo_approvisionnements: J('covo_approvisionnements', []),
+        covo_inv_categories: J('covo_inv_categories', []),
+        covo_ech_categories: J('covo_ech_categories', []),
+        covo_messages: J('covo_messages', []),
+        covo_login_history: J('covo_login_history', []),
+        covo_settings: J('covo_settings', {}),
+        covo_aw_panels: S('covo_aw_panels'),
+        covo_modules_config: S('covo_modules_config'),
+        covo_night_tariff: S('covo_night_tariff'),
+        covo_presence: S('covo_presence'),
+        covo_inv_questions: S('covo_inv_questions'),
+        covo_quick_links: J('covo_quick_links', []),
+        covo_caisse_historique: J('covo_caisse_historique', []),
+        covo_charges_fixes: J('covo_charges_fixes', []),
+        covo_paiements: J('covo_paiements', []),
+        covo_dettes: J('covo_dettes', []),
+        covo_loyalty: J('covo_loyalty', {customers:[],settings:{}}),
+        covo_paie: J('covo_paie', []),
+        covo_cagnotte: J('covo_cagnotte', {solde:0,mouvements:[]}),
+        _version: 20,
+        _savedAt: new Date().toISOString()
+    };
+}
+
+async function _cpEnsureFolder() {
+    if (_cpFolderId) return _cpFolderId;
+    _cpFolderId = localStorage.getItem('gdrive_folder_id') || null;
+    if (_cpFolderId) return _cpFolderId;
+    // Aucun dossier connu : chercher un dossier "COVO Pro" existant, sinon en créer un.
+    var q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and name contains 'COVO' and trashed=false");
+    var r = await _cpFetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)');
+    var j = await r.json();
+    if (j.files && j.files.length) { _cpFolderId = j.files[0].id; }
+    else {
+        var meta = { name: 'COVO Pro - Sauvegardes', mimeType: 'application/vnd.google-apps.folder' };
+        var cr = await _cpFetch('https://www.googleapis.com/drive/v3/files', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(meta) });
+        var cj = await cr.json();
+        _cpFolderId = cj.id;
+    }
+    if (_cpFolderId) { localStorage.setItem('gdrive_folder_id', _cpFolderId); }
+    return _cpFolderId;
+}
+
+window.cpDriveBackupNow = async function(silent) {
+    if (!_cpConnected) { if (!silent) showScanToast('⚠️ Connectez Google Drive d\'abord', 'info'); return; }
+    try {
+        var folderId = await _cpEnsureFolder();
+        if (!folderId) { if (!silent) showScanToast('❌ Impossible de déterminer le dossier Drive', 'error'); return; }
+        var now = new Date();
+        var date = now.toISOString().split('T')[0];
+        var time = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+        var filename = 'covo_backup_' + date + '_' + time + '.json';
+        var content = JSON.stringify(_cpBuildFullBackupPayload(), null, 2);
+        var meta = { name: filename, parents: [folderId] };
+        var boundary = '-------cp' + Date.now();
+        var body = '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+content+'\r\n--'+boundary+'--';
+        await _cpFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method:'POST', headers:{'Content-Type':'multipart/related; boundary='+boundary}, body: body });
+        cpSetDriveStatus(true, 'Dernière sauvegarde : ' + now.toLocaleTimeString('fr-FR'));
+        if (!silent) showScanToast('✅ Sauvegarde Drive enregistrée', 'success');
+    } catch(e) {
+        console.error(e);
+        if (!silent) showScanToast('❌ Échec de la sauvegarde Drive', 'error');
+    }
+};
+
+window.cpDriveRestoreLatest = async function() {
+    if (!_cpConnected) { showScanToast('⚠️ Connectez Google Drive d\'abord', 'info'); return; }
+    if (!confirm('Restaurer la dernière sauvegarde Drive ?\nCela remplacera les données locales partagées par toutes les apps COVO Pro sur cet appareil.')) return;
+    try {
+        var folderId = await _cpEnsureFolder();
+        var q = encodeURIComponent("'"+folderId+"' in parents and trashed=false and name contains 'covo_backup'");
+        var r = await _cpFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&orderBy=modifiedTime desc&pageSize=1&fields=files(id,name,modifiedTime)');
+        var j = await r.json();
+        if (!j.files || !j.files.length) { showScanToast('⚠️ Aucune sauvegarde trouvée sur Drive', 'info'); return; }
+        var latest = j.files[0];
+        var fr = await _cpFetch('https://www.googleapis.com/drive/v3/files/'+latest.id+'?alt=media');
+        var data = await fr.json();
+        _cpApplyRestore(data);
+        showScanToast('✅ Données restaurées depuis ' + latest.name, 'success');
+        renderCloturesTab();
+    } catch(e) {
+        console.error(e);
+        showScanToast('❌ Échec de la restauration Drive', 'error');
+    }
+};
+
+function _cpApplyRestore(data) {
+    if (!data) return;
+    if (data.products)             localStorage.setItem('covo_products', JSON.stringify(data.products));
+    if (data.categories)           localStorage.setItem('covo_categories', JSON.stringify(data.categories));
+    if (data.promoTypes)           localStorage.setItem('covo_promos', JSON.stringify(data.promoTypes));
+    if (data.users)                localStorage.setItem('covo_users', JSON.stringify(data.users));
+    if (data.salesHistory)         localStorage.setItem('covo_sales_history', JSON.stringify(data.salesHistory));
+    if (data.appSettings)          localStorage.setItem('covo_settings', JSON.stringify(data.appSettings));
+    if (data.nightTariffSettings)  localStorage.setItem('covo_night_tariff', JSON.stringify(data.nightTariffSettings));
+    if (data.cashierPermissions)   localStorage.setItem('covo_cashier_permissions', JSON.stringify(data.cashierPermissions));
+    if (data.pendingSync)          localStorage.setItem('covo_pending_sync', JSON.stringify(data.pendingSync));
+    if (data.deliveryGoal != null) localStorage.setItem('covo_delivery_goal', String(data.deliveryGoal));
+    if (data.covo_dark_mode != null) localStorage.setItem('covo_dark_mode', data.covo_dark_mode);
+    ['covo_retours','covo_marchandise','covo_echeances','covo_rhist','covo_hist','covo_sales','covo_approvisionnements',
+     'covo_inv_categories','covo_ech_categories','covo_messages','covo_login_history','covo_quick_links',
+     'covo_caisse_historique','covo_charges_fixes','covo_paiements','covo_dettes','covo_loyalty','covo_paie','covo_cagnotte'
+    ].forEach(function(k){ if (data[k] !== undefined) localStorage.setItem(k, JSON.stringify(data[k])); });
+    ['covo_aw_panels','covo_modules_config','covo_night_tariff','covo_presence','covo_inv_questions'].forEach(function(k){
+        if (data[k] != null) localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k]));
+    });
+    appSettings = (function(){ try { return JSON.parse(localStorage.getItem('covo_settings') || '{}'); } catch(e) { return {}; } })();
+}
+
+// ── Initialisation ────────────────────────────────────────────────────────
+(function cpInit(){
+    cpRefreshUserBadge();
+    window.addEventListener('storage', function(e){
+        if (e.key === 'covo_current_user') cpRefreshUserBadge();
+        if (e.key === _CAISSE_KEY) renderCloturesTab();
+    });
+    renderCloturesTab();
+    window.addEventListener('resize', function(){
+        clearTimeout(window._cpResizeTimer);
+        window._cpResizeTimer = setTimeout(function(){ _clotDrawCharts(_clotFilterCurrent(_loadCaisseHistorique())); }, 150);
+    });
+    var savedClientId = localStorage.getItem('gdrive_client_id');
+    if (savedClientId) { var inp = document.getElementById('cp-gdrive-client-id'); if (inp) inp.value = savedClientId; }
+})();
+</script>
+</body>
+</html>
