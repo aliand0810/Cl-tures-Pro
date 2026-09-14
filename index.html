@@ -70,12 +70,19 @@
 <body>
 
 <div id="cp-topbar">
-    <a class="cp-back" href="https://aliand0810.github.io/Covo-pro/" target="_blank">← COVO Pro</a>
+    <a class="cp-back" href="https://aliand0810.github.io/Covo-pro/" target="covopro">← COVO Pro</a>
     <div class="cp-title">🗓️ Clôtures Pro<small>Module Clôtures de poste — données partagées avec COVO Pro</small></div>
     <span id="cp-user-badge">👤 —</span>
     <button id="cp-drive-pill" onclick="cpToggleDrivePanel()">☁️ Google Drive</button>
     <button id="cp-install-btn" class="cp-back" style="display:none;border:1.5px solid var(--border-color);" onclick="cpInstallClick()" title="Installer l'application">📲 Installer</button>
     <button id="cp-dark-toggle" onclick="cpToggleDark()">🌙</button>
+</div>
+<div id="cp-install-banner" style="display:none;position:sticky;top:0;z-index:9999;background:linear-gradient(135deg,#1a3a5c,#102339);color:#fff;padding:10px 16px;align-items:center;justify-content:center;gap:14px;font-weight:600;font-size:0.85rem;flex-wrap:wrap;text-align:center;">
+    <span>📲 Installez Clôtures Pro pour l'ouvrir directement comme une application, en un clic.</span>
+    <span style="display:inline-flex;gap:8px;">
+        <button onclick="cpInstallClick()" style="background:#fff;color:#102339;border:none;border-radius:6px;padding:6px 14px;font-weight:800;cursor:pointer;font-size:0.82rem;">Installer maintenant</button>
+        <button onclick="cpDismissInstallBanner()" title="Fermer" style="background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,0.5);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:0.82rem;">✕</button>
+    </span>
 </div>
 <div id="cp-login-banner" style="display:none;">⚠️ Aucune session COVO Pro détectée — les actions Modifier/Supprimer sont réservées aux administrateurs connectés. Connectez-vous d'abord dans COVO Pro.</div>
 
@@ -1682,8 +1689,9 @@ function _cpApplyRestore(data) {
         e.preventDefault();
         window._cpDeferredPrompt = e;
         if (btn) btn.style.display = '';
+        if (typeof window.cpMaybeShowInstallBanner === 'function') window.cpMaybeShowInstallBanner();
     });
-    window.addEventListener('appinstalled', function() { if (btn) btn.style.display = 'none'; showScanToast('✅ Application installée', 'success'); });
+    window.addEventListener('appinstalled', function() { if (btn) btn.style.display = 'none'; var bn = document.getElementById('cp-install-banner'); if (bn) bn.style.display = 'none'; showScanToast('✅ Application installée', 'success'); });
 })();
 
 window.cpInstallClick = function() {
@@ -1695,6 +1703,20 @@ window.cpInstallClick = function() {
     } else {
         showScanToast('📲 Menu du navigateur → "Installer l\'application" (ou icône ⊕ dans la barre d\'adresse)', 'info');
     }
+};
+
+window.cpDismissInstallBanner = function(){
+    var b = document.getElementById('cp-install-banner'); if (b) b.style.display = 'none';
+    try { localStorage.setItem('covo_pwa_dismiss_cloturespro', '1'); } catch(e) {}
+};
+
+window.cpMaybeShowInstallBanner = function(){
+    var b = document.getElementById('cp-install-banner');
+    if (!b) return;
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    var dismissed = false;
+    try { dismissed = localStorage.getItem('covo_pwa_dismiss_cloturespro') === '1'; } catch(e) {}
+    b.style.display = (!isStandalone && !dismissed && window._cpDeferredPrompt) ? 'flex' : 'none';
 };
 
 // ── Initialisation ────────────────────────────────────────────────────────
